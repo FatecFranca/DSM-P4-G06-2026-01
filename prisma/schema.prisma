@@ -1,0 +1,128 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MONITOR
+}
+
+enum TriggerSource {
+  AUTOMATIC
+  MANUAL
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(MONITOR)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  actuatorLogs ActuatorLog[]
+  alerts       Alert[]       @relation("AcknowledgedBy")
+
+  @@map("users")
+}
+
+model Greenhouse {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  config      GreenhouseConfig?
+  actuators   Actuator[]
+  alerts      Alert[]
+
+  @@map("greenhouses")
+}
+
+model GreenhouseConfig {
+  id            String   @id @default(uuid())
+  greenhouseId  String   @unique @map("greenhouse_id")
+  tempMax       Float    @default(30.0) @map("temp_max")
+  tempMin       Float    @default(15.0) @map("temp_min")
+  humidSoilMin  Float    @default(40.0) @map("humid_soil_min")
+  humidSoilMax  Float    @default(80.0) @map("humid_soil_max")
+  irrigMaxSecs  Int      @default(120)  @map("irrig_max_secs")
+  lightOnTime   String   @default("18:00") @map("light_on_time")
+  lightOffTime  String   @default("22:00") @map("light_off_time")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  greenhouse Greenhouse @relation(fields: [greenhouseId], references: [id], onDelete: Cascade)
+
+  @@map("greenhouse_configs")
+}
+
+model Actuator {
+  id           String   @id @default(uuid())
+  greenhouseId String   @map("greenhouse_id")
+  name         String   // bomba | exaustor | lampada
+  state        Boolean  @default(false)
+  mode         String   @default("automatic") // automatic | manual
+  manualUntil  DateTime? @map("manual_until")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  greenhouse Greenhouse    @relation(fields: [greenhouseId], references: [id], onDelete: Cascade)
+  logs       ActuatorLog[]
+
+  @@unique([greenhouseId, name])
+  @@map("actuators")
+}
+
+model ActuatorLog {
+  id           String        @id @default(uuid())
+  actuatorId   String        @map("actuator_id")
+  userId       String?       @map("user_id")
+  state        Boolean
+  trigger      TriggerSource @default(AUTOMATIC)
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  actuator Actuator @relation(fields: [actuatorId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id])
+
+  @@map("actuator_logs")
+}
+
+model Alert {
+  id            String        @id @default(uuid())
+  greenhouseId  String        @map("greenhouse_id")
+  severity      AlertSeverity @default(WARNING)
+  status        AlertStatus   @default(OPEN)
+  type          String        // TEMP_CRITICAL | SENSOR_FAILURE | IRRIGATION_TIMEOUT | DEVICE_OFFLINE
+  message       String
+  metadata      Json?
+  acknowledgedBy String?      @map("acknowledged_by")
+  acknowledgedAt DateTime?    @map("acknowledged_at")
+  resolvedAt    DateTime?     @map("resolved_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  greenhouse Greenhouse @relation(fields: [greenhouseId], references: [id], onDelete: Cascade)
+  user       User?      @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
+
+  @@map("alerts")
+}
