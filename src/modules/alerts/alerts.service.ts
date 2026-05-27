@@ -31,14 +31,14 @@ export class AlertsService {
     metadata?: Record<string, unknown>
   ) {
     const alert = await prisma.alert.create({
-      data: { greenhouseId, type, message, severity, metadata },
+      data: { greenhouseId, type, message, severity, metadata: metadata as any },
       include: { greenhouse: { select: { name: true } } },
     });
 
     logger.warn('Alert created', { id: alert.id, type, severity, greenhouseId });
 
     if (severity === 'CRITICAL' && env.ALERT_EMAIL_TO) {
-      this.sendEmail(alert.greenhouse.name, type, message).catch((err) =>
+      this.sendEmail((alert as any).greenhouse.name, type, message).catch((err) =>
         logger.error('Email send failed', { err })
       );
     }
