@@ -1,0 +1,1982 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  StatusBar,
+  TextInput,
+  Modal,
+  Animated,
+  Dimensions,
+  FlatList,
+  Switch,
+} from 'react-native';
+import {
+  Leaf,
+  Cpu,
+  Thermometer,
+  Droplet,
+  Wind,
+  Sun,
+  Bell,
+  Users,
+  Plus,
+  Activity,
+  ShieldAlert,
+  CheckCircle,
+  Zap,
+  ArrowRight,
+  Sliders,
+  RefreshCw,
+  Sparkles,
+  Check,
+  UserCheck,
+  Database,
+  Home,
+  ChevronRight,
+  Settings,
+  X,
+  Info,
+} from 'lucide-react-native';
+
+const { width, height } = Dimensions.get('window');
+
+const INITIAL_GREENHOUSES = [
+  {
+    id: 'gh-01',
+    name: 'Estufa Alpha',
+    sector: 'Setor Norte',
+    status: 'healthy',
+    phase: 'Vegetativo',
+    sensors: {
+      temp: 24.2,
+      umid_ar: 58.5,
+      umid_solo: 62.1,
+      luz: 450,
+    },
+    limits: {
+      tempMin: 18,
+      tempMax: 28,
+      umidSoloMin: 40,
+      umidSoloMax: 80,
+      luzMin: 200,
+      luzMax: 800,
+    },
+    actuators: {
+      lampada: true,
+      exaustor: false,
+      bomba: false,
+    },
+    history: {
+      temp: [23.1, 23.4, 23.8, 24.0, 24.2, 24.2, 24.1, 24.2],
+      umid_ar: [55, 56, 57, 59, 58, 58, 58, 58.5],
+      umid_solo: [66, 65, 64, 63, 63, 62, 62, 62.1],
+    },
+    heartbeat: true,
+    lastSeen: 'Online',
+  },
+  {
+    id: 'gh-02',
+    name: 'Estufa Beta',
+    sector: 'Setor Sul',
+    status: 'warning',
+    phase: 'Clones',
+    sensors: {
+      temp: 29.5,
+      umid_ar: 42.1,
+      umid_solo: 35.0,
+      luz: 150,
+    },
+    limits: {
+      tempMin: 18,
+      tempMax: 27,
+      umidSoloMin: 50,
+      umidSoloMax: 90,
+      luzMin: 100,
+      luzMax: 500,
+    },
+    actuators: {
+      lampada: true,
+      exaustor: true,
+      bomba: false,
+    },
+    history: {
+      temp: [26.5, 27.0, 27.8, 28.4, 29.1, 29.3, 29.4, 29.5],
+      umid_ar: [50, 48, 47, 45, 44, 43, 42.5, 42.1],
+      umid_solo: [45, 42, 40, 39, 38, 37, 36, 35.0],
+    },
+    heartbeat: true,
+    lastSeen: 'Online',
+  },
+  {
+    id: 'gh-03',
+    name: 'Cúpula Gamma',
+    sector: 'Setor Leste',
+    status: 'healthy',
+    phase: 'Floração',
+    sensors: {
+      temp: 22.8,
+      umid_ar: 64.2,
+      umid_solo: 71.5,
+      luz: 380,
+    },
+    limits: {
+      tempMin: 15,
+      tempMax: 26,
+      umidSoloMin: 45,
+      umidSoloMax: 85,
+      luzMin: 150,
+      luzMax: 600,
+    },
+    actuators: {
+      lampada: false,
+      exaustor: false,
+      bomba: false,
+    },
+    history: {
+      temp: [22.5, 22.6, 22.7, 22.8, 22.8, 22.7, 22.8, 22.8],
+      umid_ar: [63, 63, 64, 64, 64, 65, 64, 64.2],
+      umid_solo: [75, 74, 73, 73, 72, 72, 71, 71.5],
+    },
+    heartbeat: false,
+    lastSeen: 'Offline a 5min',
+  },
+];
+
+const INITIAL_ALERTS = [
+  {
+    id: 'alert-1',
+    greenhouseId: 'gh-02',
+    greenhouseName: 'Estufa Beta',
+    type: 'critical',
+    metric: 'Umidade do Solo',
+    message: 'Baixa umidade detectada (35.0%). Perigo de estresse hídrico agudo.',
+    timestamp: '5 min atrás',
+    resolved: false,
+  },
+  {
+    id: 'alert-2',
+    greenhouseId: 'gh-02',
+    greenhouseName: 'Estufa Beta',
+    type: 'warning',
+    metric: 'Temperatura',
+    message: 'Temperatura ultrapassou limite superior (29.5°C vs 27.0°C).',
+    timestamp: '8 min atrás',
+    resolved: false,
+  },
+];
+
+const INITIAL_USERS = [
+  { id: 'usr-1', name: 'Gabriel Santos', role: 'ADMIN', status: 'active', avatar: '👨‍🌾' },
+  { id: 'usr-2', name: 'Juliana Silva', role: 'MONITOR', status: 'active', avatar: '👩‍🔬' },
+];
+
+const colors = {
+  dark: '#060807',
+  darkSecondary: '#080b09',
+  darkTertiary: '#0a110d',
+  emerald: '#10b981',
+  emeraldLight: '#34d399',
+  emeraldDark: '#059669',
+  emeraldVeryDark: '#064e3b',
+  zinc: {
+    100: '#f4f4f5',
+    300: '#d4d4d8',
+    400: '#a1a1a8',
+    500: '#71717a',
+    600: '#52525b',
+    700: '#3f3f46',
+    800: '#27272a',
+    900: '#18181b',
+    950: '#09090b',
+  },
+  rose: {
+    400: '#f87171',
+    500: '#ef4444',
+    950: '#500724',
+  },
+};
+
+export default function App() {
+  const [greenhouses, setGreenhouses] = useState(INITIAL_GREENHOUSES);
+  const [selectedGreenhouse, setSelectedGreenhouse] = useState(INITIAL_GREENHOUSES[0]);
+  const [alerts, setAlerts] = useState(INITIAL_ALERTS);
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [isInsideDetails, setIsInsideDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isSocketConnected, setIsSocketConnected] = useState(true);
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newGhName, setNewGhName] = useState('');
+  const [newGhSector, setNewGhSector] = useState('Setor Norte');
+
+  const [limitTempMin, setLimitTempMin] = useState(selectedGreenhouse.limits.tempMin);
+  const [limitTempMax, setLimitTempMax] = useState(selectedGreenhouse.limits.tempMax);
+  const [limitUmidMin, setLimitUmidMin] = useState(selectedGreenhouse.limits.umidSoloMin);
+  const [limitUmidMax, setLimitUmidMax] = useState(selectedGreenhouse.limits.umidSoloMax);
+  const [limitLuzMin, setLimitLuzMin] = useState(selectedGreenhouse.limits.luzMin);
+  const [limitLuzMax, setLimitLuzMax] = useState(selectedGreenhouse.limits.luzMax);
+
+  const [showConsole, setShowConsole] = useState(false);
+  const [terminalLogs, setTerminalLogs] = useState([
+    {
+      id: 1,
+      time: '20:34:01',
+      source: 'SOCKET',
+      msg: 'Autenticado com JWT via websocket.',
+      type: 'success',
+    },
+    {
+      id: 2,
+      time: '20:34:03',
+      source: 'MQTT',
+      msg: 'Inscrito no tópico: agrotech/estufa/+/telemetria',
+      type: 'success',
+    },
+    {
+      id: 3,
+      time: '20:34:06',
+      source: 'NODE_GH_01',
+      msg: 'Uplink recebido: { temp: 24.2, umid_solo: 62.1 }',
+      type: 'info',
+    },
+  ]);
+
+  useEffect(() => {
+    if (selectedGreenhouse) {
+      setLimitTempMin(selectedGreenhouse.limits.tempMin);
+      setLimitTempMax(selectedGreenhouse.limits.tempMax);
+      setLimitUmidMin(selectedGreenhouse.limits.umidSoloMin);
+      setLimitUmidMax(selectedGreenhouse.limits.umidSoloMax);
+      setLimitLuzMin(selectedGreenhouse.limits.luzMin);
+      setLimitLuzMax(selectedGreenhouse.limits.luzMax);
+    }
+  }, [selectedGreenhouse]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGreenhouses((prevGHs) => {
+        const updated = prevGHs.map((gh) => {
+          if (!gh.heartbeat) return gh;
+
+          const nextSensors = { ...gh.sensors };
+          const nextActuators = { ...gh.actuators };
+
+          if (nextActuators.lampada) {
+            nextSensors.temp += Math.random() * 0.1;
+            nextSensors.luz = Math.min(800, nextSensors.luz + Math.round(Math.random() * 6));
+          } else {
+            nextSensors.temp -= Math.random() * 0.08;
+            nextSensors.luz = Math.max(20, nextSensors.luz - Math.round(Math.random() * 8));
+          }
+
+          if (nextActuators.exaustor) {
+            nextSensors.temp -= Math.random() * 0.12;
+            nextSensors.umid_ar = Math.max(30, nextSensors.umid_ar - Math.random() * 0.3);
+          } else {
+            nextSensors.temp += Math.random() * 0.04;
+            nextSensors.umid_ar = Math.min(80, nextSensors.umid_ar + Math.random() * 0.1);
+          }
+
+          if (nextActuators.bomba) {
+            nextSensors.umid_solo = Math.min(95, nextSensors.umid_solo + Math.random() * 2.2);
+            if (nextSensors.umid_solo >= 75) {
+              nextActuators.bomba = false;
+              addLog(`NODE_${gh.id.toUpperCase()}`, `Bomba desativada automaticamente (Solo úmido: ${nextSensors.umid_solo.toFixed(1)}%).`, 'success');
+            }
+          } else {
+            nextSensors.umid_solo = Math.max(15, nextSensors.umid_solo - Math.random() * 0.05);
+          }
+
+          nextSensors.temp = parseFloat(Math.max(10, Math.min(45, nextSensors.temp)).toFixed(1));
+          nextSensors.umid_ar = parseFloat(Math.max(10, Math.min(100, nextSensors.umid_ar)).toFixed(1));
+          nextSensors.umid_solo = parseFloat(Math.max(5, Math.min(100, nextSensors.umid_solo)).toFixed(1));
+
+          let status = 'healthy';
+          if (
+            nextSensors.temp < gh.limits.tempMin ||
+            nextSensors.temp > gh.limits.tempMax ||
+            nextSensors.umid_solo < gh.limits.umidSoloMin ||
+            nextSensors.umid_solo > gh.limits.umidSoloMax
+          ) {
+            status = 'warning';
+            if (Math.random() < 0.15) {
+              triggerAlertFromTelemetry(gh, nextSensors);
+            }
+          }
+
+          return {
+            ...gh,
+            sensors: nextSensors,
+            actuators: nextActuators,
+            status,
+          };
+        });
+
+        const updatedSelected = updated.find((g) => g.id === selectedGreenhouse.id);
+        if (updatedSelected) {
+          setSelectedGreenhouse(updatedSelected);
+        }
+
+        return updated;
+      });
+
+      if (Math.random() < 0.3) {
+        const activeNodes = greenhouses.filter((g) => g.heartbeat);
+        const randomGH = activeNodes[Math.floor(Math.random() * activeNodes.length)];
+        if (randomGH) {
+          addLog(
+            `NODE_${randomGH.id.toUpperCase()}`,
+            `TELEMETRIA -> temp: ${randomGH.sensors.temp}°C | solo: ${randomGH.sensors.umid_solo}% | luz: ${randomGH.sensors.luz} Lm`,
+            'info'
+          );
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [greenhouses, selectedGreenhouse]);
+
+  const addLog = (source, msg, type = 'info') => {
+    const time = new Date().toLocaleTimeString();
+    setTerminalLogs((prev) => [{ id: Date.now(), time, source, msg, type }, ...prev.slice(0, 20)]);
+  };
+
+  const toggleActuator = (ghId, actuatorKey) => {
+    setGreenhouses((prev) =>
+      prev.map((gh) => {
+        if (gh.id === ghId) {
+          const nextVal = !gh.actuators[actuatorKey];
+          const updatedActuators = { ...gh.actuators, [actuatorKey]: nextVal };
+
+          addLog(
+            'WEBSOCKET',
+            `Comando GPIO [${gh.name}]: Definir [${actuatorKey}] para [${nextVal ? 'LIGADO' : 'DESLIGADO'}]`,
+            nextVal ? 'success' : 'warning'
+          );
+
+          return { ...gh, actuators: updatedActuators };
+        }
+        return gh;
+      })
+    );
+  };
+
+  const triggerAlertFromTelemetry = (gh, sensors) => {
+    let msg = '';
+    let metric = '';
+    if (sensors.temp > gh.limits.tempMax) {
+      msg = `Temperatura crítica de ${sensors.temp}°C na estufa ${gh.name}.`;
+      metric = 'Temperatura';
+    } else if (sensors.umid_solo < gh.limits.umidSoloMin) {
+      msg = `Umidade do solo crítica de ${sensors.umid_solo}% detectada na estufa ${gh.name}.`;
+      metric = 'Umidade do Solo';
+    }
+
+    if (!msg) return;
+
+    setAlerts((prev) => {
+      const duplicate = prev.some((a) => a.greenhouseId === gh.id && a.metric === metric && !a.resolved);
+      if (duplicate) return prev;
+
+      addLog('ALERTA', `Anomalia de ${metric} em ${gh.name}!`, 'danger');
+      return [
+        {
+          id: `alert-${Date.now()}`,
+          greenhouseId: gh.id,
+          greenhouseName: gh.name,
+          type: 'warning',
+          metric,
+          message: msg,
+          timestamp: 'Agora mesmo',
+          resolved: false,
+        },
+        ...prev,
+      ];
+    });
+  };
+
+  const handleResolveAlert = (alertId) => {
+    setAlerts((prev) =>
+      prev.map((alert) => {
+        if (alert.id === alertId) {
+          addLog('API', `Alerta [${alertId}] marcado como resolvido no Postgres.`, 'success');
+          return { ...alert, resolved: true };
+        }
+        return alert;
+      })
+    );
+  };
+
+  const handleCreateGreenhouse = () => {
+    if (!newGhName.trim()) return;
+
+    const newGh = {
+      id: `gh-${Date.now()}`,
+      name: newGhName,
+      sector: newGhSector,
+      status: 'healthy',
+      phase: 'Vegetativo',
+      sensors: {
+        temp: 24.0,
+        umid_ar: 60.0,
+        umid_solo: 55.0,
+        luz: 300,
+      },
+      limits: {
+        tempMin: 18,
+        tempMax: 28,
+        umidSoloMin: 45,
+        umidSoloMax: 85,
+        luzMin: 150,
+        luzMax: 700,
+      },
+      actuators: {
+        lampada: false,
+        exaustor: false,
+        bomba: false,
+      },
+      history: {
+        temp: [22, 23, 24, 24, 24, 24, 24, 24.0],
+        umid_ar: [55, 58, 60, 60, 60, 60, 60, 60.0],
+        umid_solo: [50, 52, 55, 55, 55, 55, 55, 55.0],
+      },
+      heartbeat: true,
+      lastSeen: 'Online',
+    };
+
+    setGreenhouses((prev) => [...prev, newGh]);
+    addLog('DB', `Novo nó '${newGh.name}' provisionado com sucesso.`, 'success');
+    setNewGhName('');
+    setShowAddModal(false);
+  };
+
+  const handleUpdateLimits = () => {
+    setGreenhouses((prev) =>
+      prev.map((gh) => {
+        if (gh.id === selectedGreenhouse.id) {
+          const updated = {
+            ...gh,
+            limits: {
+              tempMin: parseFloat(limitTempMin),
+              tempMax: parseFloat(limitTempMax),
+              umidSoloMin: parseFloat(limitUmidMin),
+              umidSoloMax: parseFloat(limitUmidMax),
+              luzMin: parseFloat(limitLuzMin),
+              luzMax: parseFloat(limitLuzMax),
+            },
+          };
+          addLog('DB', `Parâmetros atualizados para ${gh.name}`, 'success');
+          return updated;
+        }
+        return gh;
+      })
+    );
+    setSelectedGreenhouse((prev) => ({
+      ...prev,
+      limits: {
+        tempMin: parseFloat(limitTempMin),
+        tempMax: parseFloat(limitTempMax),
+        umidSoloMin: parseFloat(limitUmidMin),
+        umidSoloMax: parseFloat(limitUmidMax),
+        luzMin: parseFloat(limitLuzMin),
+        luzMax: parseFloat(limitLuzMax),
+      },
+    }));
+    setActiveTab('overview');
+  };
+
+  const navigateToDetails = (gh) => {
+    setSelectedGreenhouse(gh);
+    setIsInsideDetails(true);
+    setActiveTab('overview');
+  };
+
+  const activeAlertsCount = alerts.filter((a) => !a.resolved).length;
+
+  const renderDashboard = () => (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      {/* Greeting Card */}
+      <View style={[styles.card, { marginBottom: 24 }]}>
+        <View style={styles.cardContent}>
+          <Text style={styles.greeting}>Bem-vindo, Operador 👋</Text>
+          <Text style={styles.subGreeting}>
+            Todos os {greenhouses.length} estufas operando no modo ciclo contínuo. Nenhuma anomalia detectada.
+          </Text>
+
+          {/* Micro metrics grid */}
+          <View style={styles.metricsGrid}>
+            <View style={styles.metricCard}>
+              <View style={styles.metricIcon}>
+                <Thermometer size={16} color={colors.emerald} />
+              </View>
+              <Text style={styles.metricLabel}>Temp Média</Text>
+              <Text style={styles.metricValue}>24.8°C</Text>
+            </View>
+            <View style={styles.metricCard}>
+              <View style={styles.metricIcon}>
+                <Droplet size={16} color={colors.emerald} />
+              </View>
+              <Text style={styles.metricLabel}>Solo Médio</Text>
+              <Text style={styles.metricValue}>56.2%</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* Greenhouse nodes stack */}
+      <View style={{ marginBottom: 24 }}>
+        <Text style={styles.sectionTitle}>Estufas Online</Text>
+        <Text style={styles.sectionSubtitle}>Toque para configurar</Text>
+
+        {greenhouses.map((gh) => {
+          const isTempOut = gh.sensors.temp < gh.limits.tempMin || gh.sensors.temp > gh.limits.tempMax;
+
+          return (
+            <TouchableOpacity
+              key={gh.id}
+              style={[
+                styles.greenhouseCard,
+                gh.status === 'warning' && { borderColor: colors.rose[500] },
+              ]}
+              onPress={() => navigateToDetails(gh)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.ghHeader}>
+                <View style={styles.ghTitleSection}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      {
+                        backgroundColor:
+                          gh.status === 'healthy' ? colors.emerald : colors.rose[500],
+                      },
+                    ]}
+                  />
+                  <View>
+                    <Text style={styles.ghName}>{gh.name}</Text>
+                    <Text style={styles.ghSector}>{gh.sector}</Text>
+                  </View>
+                </View>
+                <View
+                  style={[
+                    styles.heartbeat,
+                    {
+                      backgroundColor: gh.heartbeat
+                        ? 'rgba(16, 185, 129, 0.1)'
+                        : 'rgba(239, 68, 68, 0.1)',
+                      borderColor: gh.heartbeat ? colors.emerald : colors.rose[500],
+                    },
+                  ]}
+                >
+                  <Activity
+                    size={12}
+                    color={gh.heartbeat ? colors.emerald : colors.rose[500]}
+                  />
+                  <Text
+                    style={[
+                      styles.heartbeatText,
+                      {
+                        color: gh.heartbeat ? colors.emerald : colors.rose[500],
+                      },
+                    ]}
+                  >
+                    {gh.lastSeen}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Quick telemetry display */}
+              <View style={styles.telemetryGrid}>
+                <View style={styles.telemetryItem}>
+                  <Thermometer size={12} color={colors.zinc[400]} />
+                  <Text
+                    style={[
+                      styles.telemetryValue,
+                      isTempOut && { color: colors.rose[400] },
+                    ]}
+                  >
+                    {gh.sensors.temp}°C
+                  </Text>
+                </View>
+                <View style={styles.telemetryItem}>
+                  <Droplet size={12} color={colors.zinc[400]} />
+                  <Text style={styles.telemetryValue}>{gh.sensors.umid_solo}%</Text>
+                </View>
+                <View style={styles.telemetryItem}>
+                  <Sun size={12} color={colors.zinc[400]} />
+                  <Text style={styles.telemetryValue}>{gh.sensors.luz} Lm</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Add Greenhouse Button */}
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setShowAddModal(true)}
+        activeOpacity={0.7}
+      >
+        <Plus size={16} color={colors.emerald} />
+        <Text style={styles.addButtonText}>Adicionar Nova Estufa</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+
+  const renderDetails = () => (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      {/* Back button */}
+      <View style={styles.detailsHeader}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setIsInsideDetails(false)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.backButtonText}>← Voltar</Text>
+        </TouchableOpacity>
+
+        <View style={styles.detailsTitle}>
+          <Text style={styles.detailsTitleLabel}>Visualizando</Text>
+          <Text style={styles.detailsTitleName}>{selectedGreenhouse.name}</Text>
+        </View>
+      </View>
+
+      {/* Tab buttons */}
+      <View style={styles.tabContainer}>
+        {['overview', 'limits', 'metrics'].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[
+              styles.tabButton,
+              activeTab === tab && styles.tabButtonActive,
+            ]}
+            onPress={() => setActiveTab(tab)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.tabButtonText,
+                activeTab === tab && styles.tabButtonTextActive,
+              ]}
+            >
+              {tab === 'overview' ? 'Controle' : tab === 'limits' ? 'Limites' : 'Gráficos'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <View style={styles.tabContent}>
+          {/* Current sensors */}
+          <View style={styles.sensorPanel}>
+            <Text style={styles.panelTitle}>Sensores em Tempo Real</Text>
+
+            <View style={styles.sensorGrid}>
+              <View style={styles.sensorCard}>
+                <Thermometer size={20} color={colors.emerald} />
+                <Text style={styles.sensorLabel}>Temperatura</Text>
+                <Text style={styles.sensorValue}>{selectedGreenhouse.sensors.temp}°C</Text>
+                <Text style={styles.sensorRange}>
+                  {selectedGreenhouse.limits.tempMin}° - {selectedGreenhouse.limits.tempMax}°
+                </Text>
+              </View>
+
+              <View style={styles.sensorCard}>
+                <Droplet size={20} color={colors.emerald} />
+                <Text style={styles.sensorLabel}>Umidade Solo</Text>
+                <Text style={styles.sensorValue}>{selectedGreenhouse.sensors.umid_solo}%</Text>
+                <Text style={styles.sensorRange}>
+                  {selectedGreenhouse.limits.umidSoloMin}% - {selectedGreenhouse.limits.umidSoloMax}%
+                </Text>
+              </View>
+
+              <View style={styles.sensorCard}>
+                <Wind size={20} color={colors.emerald} />
+                <Text style={styles.sensorLabel}>Umidade Ar</Text>
+                <Text style={styles.sensorValue}>{selectedGreenhouse.sensors.umid_ar}%</Text>
+                <Text style={styles.sensorRange}>30% - 80%</Text>
+              </View>
+
+              <View style={styles.sensorCard}>
+                <Sun size={20} color={colors.emerald} />
+                <Text style={styles.sensorLabel}>Luminosidade</Text>
+                <Text style={styles.sensorValue}>{selectedGreenhouse.sensors.luz} Lm</Text>
+                <Text style={styles.sensorRange}>
+                  {selectedGreenhouse.limits.luzMin} - {selectedGreenhouse.limits.luzMax}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Actuators control */}
+          <View style={styles.actuatorsPanel}>
+            <Text style={styles.panelTitle}>Controle de Atuadores</Text>
+
+            {[
+              { key: 'lampada', label: 'Lâmpada', icon: Sun },
+              { key: 'exaustor', label: 'Exaustor', icon: Wind },
+              { key: 'bomba', label: 'Bomba de Água', icon: Droplet },
+            ].map(({ key, label, icon: Icon }) => (
+              <TouchableOpacity
+                key={key}
+                style={[
+                  styles.actuatorRow,
+                  selectedGreenhouse.actuators[key] && {
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  },
+                ]}
+                onPress={() => toggleActuator(selectedGreenhouse.id, key)}
+                activeOpacity={0.6}
+              >
+                <View style={styles.actuatorInfo}>
+                  <Icon size={18} color={colors.emerald} />
+                  <Text style={styles.actuatorLabel}>{label}</Text>
+                </View>
+                <View
+                  style={[
+                    styles.toggle,
+                    selectedGreenhouse.actuators[key] && {
+                      backgroundColor: colors.emerald,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.toggleThumb,
+                      selectedGreenhouse.actuators[key] && {
+                        marginLeft: 16,
+                      },
+                    ]}
+                  />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {activeTab === 'limits' && (
+        <View style={styles.tabContent}>
+          <View style={styles.limitsPanel}>
+            <Text style={styles.panelTitle}>Limites de Tolerância</Text>
+
+            {[
+              { label: 'Temperatura Mínima (°C)', state: limitTempMin, setState: setLimitTempMin },
+              { label: 'Temperatura Máxima (°C)', state: limitTempMax, setState: setLimitTempMax },
+              { label: 'Umidade Solo Mínima (%)', state: limitUmidMin, setState: setLimitUmidMin },
+              { label: 'Umidade Solo Máxima (%)', state: limitUmidMax, setState: setLimitUmidMax },
+              { label: 'Luminosidade Mínima (Lm)', state: limitLuzMin, setState: setLimitLuzMin },
+              { label: 'Luminosidade Máxima (Lm)', state: limitLuzMax, setState: setLimitLuzMax },
+            ].map((field, idx) => (
+              <View key={idx} style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{field.label}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={String(field.state)}
+                  onChangeText={(val) => field.setState(parseFloat(val) || 0)}
+                  keyboardType="decimal-pad"
+                  placeholderTextColor={colors.zinc[500]}
+                />
+              </View>
+            ))}
+
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleUpdateLimits}
+              activeOpacity={0.7}
+            >
+              <Check size={16} color="black" />
+              <Text style={styles.saveButtonText}>Salvar Limites</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {activeTab === 'metrics' && (
+        <View style={styles.tabContent}>
+          <View style={styles.metricsPanel}>
+            <Text style={styles.panelTitle}>Histórico de Métricas</Text>
+            <Text style={styles.metricsInfo}>
+              Últimas 8 leituras de sensores (intervalo de 3 segundos)
+            </Text>
+
+            <View style={styles.metricsChart}>
+              <View style={styles.metricRow}>
+                <Text style={styles.metricRowLabel}>Temperatura:</Text>
+                <Text style={styles.metricRowValues}>
+                  {selectedGreenhouse.history.temp.join(' → ')}°C
+                </Text>
+              </View>
+              <View style={styles.metricRow}>
+                <Text style={styles.metricRowLabel}>Umidade Ar:</Text>
+                <Text style={styles.metricRowValues}>
+                  {selectedGreenhouse.history.umid_ar.join(' → ')}%
+                </Text>
+              </View>
+              <View style={styles.metricRow}>
+                <Text style={styles.metricRowLabel}>Umidade Solo:</Text>
+                <Text style={styles.metricRowValues}>
+                  {selectedGreenhouse.history.umid_solo.join(' → ')}%
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+    </ScrollView>
+  );
+
+  const renderAlerts = () => (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <View>
+        <Text style={styles.sectionTitle}>Alertas e Anomalias</Text>
+        <Text style={styles.sectionSubtitle}>
+          {activeAlertsCount} eventos pendentes de resolução
+        </Text>
+      </View>
+
+      {alerts.length === 0 ? (
+        <View style={styles.emptyState}>
+          <CheckCircle size={48} color={colors.emerald} />
+          <Text style={styles.emptyStateText}>Sem alertas no momento!</Text>
+        </View>
+      ) : (
+        <View style={styles.alertsList}>
+          {alerts.map((alert) => (
+            <View
+              key={alert.id}
+              style={[
+                styles.alertCard,
+                alert.type === 'critical' && {
+                  borderLeftColor: colors.rose[500],
+                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                },
+                alert.resolved && {
+                  opacity: 0.5,
+                },
+              ]}
+            >
+              <View style={styles.alertHeader}>
+                <View style={styles.alertTitleSection}>
+                  {alert.type === 'critical' ? (
+                    <ShieldAlert size={16} color={colors.rose[500]} />
+                  ) : (
+                    <Bell size={16} color={colors.emeraldDark} />
+                  )}
+                  <View>
+                    <Text style={styles.alertTitle}>{alert.metric}</Text>
+                    <Text style={styles.alertGreenhouse}>{alert.greenhouseName}</Text>
+                  </View>
+                </View>
+                <Text style={styles.alertTime}>{alert.timestamp}</Text>
+              </View>
+
+              <Text style={styles.alertMessage}>{alert.message}</Text>
+
+              {!alert.resolved && (
+                <TouchableOpacity
+                  style={styles.resolveButton}
+                  onPress={() => handleResolveAlert(alert.id)}
+                  activeOpacity={0.7}
+                >
+                  <Check size={14} color={colors.emerald} />
+                  <Text style={styles.resolveButtonText}>Marcar como Resolvido</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+        </View>
+      )}
+    </ScrollView>
+  );
+
+  const renderSettings = () => (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <View>
+        <Text style={styles.sectionTitle}>Ajustes e Controle RBAC</Text>
+        <Text style={styles.sectionSubtitle}>
+          Mapeamento de banco de dados e controle de acesso
+        </Text>
+      </View>
+
+      {/* Users */}
+      <View style={styles.usersSection}>
+        <Text style={styles.subsectionTitle}>Operadores Registrados (Postgres)</Text>
+        {INITIAL_USERS.map((user) => (
+          <View key={user.id} style={styles.userCard}>
+            <Text style={styles.userAvatar}>{user.avatar}</Text>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{user.name}</Text>
+              <Text style={styles.userRole}>{user.role}</Text>
+            </View>
+            <View
+              style={[
+                styles.userStatus,
+                {
+                  backgroundColor:
+                    user.status === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(107, 114, 128, 0.1)',
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.statusIndicator,
+                  {
+                    backgroundColor:
+                      user.status === 'active' ? colors.emerald : colors.zinc[500],
+                  },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.userStatusText,
+                  {
+                    color: user.status === 'active' ? colors.emerald : colors.zinc[500],
+                  },
+                ]}
+              >
+                {user.status === 'active' ? 'Ativo' : 'Inativo'}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {/* Database info */}
+      <View style={styles.dbSection}>
+        <Text style={styles.subsectionTitle}>Estrutura do Banco de Dados</Text>
+        <View style={styles.dbInfo}>
+          <Database size={16} color={colors.emerald} />
+          <Text style={styles.dbText}>PostgreSQL</Text>
+        </View>
+        <Text style={styles.dbDetails}>
+          {greenhouses.length} estufas | {alerts.length} alertas ativos | {INITIAL_USERS.length} usuários
+        </Text>
+      </View>
+
+      {/* Security note */}
+      <View style={styles.securityNote}>
+        <Info size={16} color={colors.emerald} />
+        <Text style={styles.securityNoteTitle}>Nota de Segurança</Text>
+        <Text style={styles.securityNoteText}>
+          O envio de comandos WebSocket de alteração de relé requer assinatura JWT válida do papel ADMIN.
+          Monitores têm permissão estrita de leitura rápida.
+        </Text>
+      </View>
+    </ScrollView>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.dark} />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <View style={styles.logo}>
+            <Leaf size={18} color={colors.emerald} />
+          </View>
+          <View>
+            <Text style={styles.logoSubtitle}>AgroTech IoT</Text>
+            <Text style={styles.logoTitle}>Grower Console</Text>
+          </View>
+        </View>
+
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              isSocketConnected
+                ? { borderColor: colors.emerald }
+                : { borderColor: colors.rose[500] },
+            ]}
+            onPress={() => {
+              setIsSocketConnected(!isSocketConnected);
+              addLog(
+                'SOCKET',
+                isSocketConnected ? 'Conexão encerrada manual.' : 'Conexão restabelecida.',
+                isSocketConnected ? 'danger' : 'success'
+              );
+            }}
+            activeOpacity={0.7}
+          >
+            <RefreshCw
+              size={12}
+              color={isSocketConnected ? colors.emerald : colors.rose[500]}
+            />
+            <Text
+              style={[
+                styles.headerButtonText,
+                isSocketConnected
+                  ? { color: colors.emerald }
+                  : { color: colors.rose[500] },
+              ]}
+            >
+              {isSocketConnected ? 'Online' : 'Offline'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              showConsole && { backgroundColor: colors.emerald },
+            ]}
+            onPress={() => setShowConsole(!showConsole)}
+            activeOpacity={0.7}
+          >
+            <Database size={14} color={showConsole ? 'black' : colors.zinc[400]} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Console Logs */}
+      {showConsole && (
+        <View style={styles.console}>
+          <View style={styles.consoleHeader}>
+            <Text style={styles.consoleTitle}>Stream Real-time (MQTT/Sockets)</Text>
+            <TouchableOpacity onPress={() => setShowConsole(false)} activeOpacity={0.7}>
+              <X size={12} color={colors.zinc[500]} />
+            </TouchableOpacity>
+          </View>
+
+          {terminalLogs.length === 0 ? (
+            <Text style={styles.consoleEmpty}>Aguardando novos payloads...</Text>
+          ) : (
+            <FlatList
+              data={terminalLogs}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => (
+                <View style={styles.logEntry}>
+                  <Text style={styles.logTime}>[{item.time}]</Text>
+                  <Text
+                    style={[
+                      styles.logSource,
+                      item.type === 'success' && { color: colors.emerald },
+                      item.type === 'danger' && { color: colors.rose[500] },
+                    ]}
+                  >
+                    {item.source}
+                  </Text>
+                  <Text style={styles.logMessage}>{item.msg}</Text>
+                </View>
+              )}
+              scrollEnabled={false}
+              nestedScrollEnabled={false}
+            />
+          )}
+        </View>
+      )}
+
+      {/* Main Content */}
+      <View style={styles.content}>
+        {currentPage === 'dashboard' && !isInsideDetails && renderDashboard()}
+        {isInsideDetails && renderDetails()}
+        {currentPage === 'alerts' && renderAlerts()}
+        {currentPage === 'settings' && renderSettings()}
+      </View>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        {[
+          { page: 'dashboard', label: 'Início', icon: Home },
+          { page: 'config', label: 'Configurar', icon: Leaf },
+          { page: 'alerts', label: 'Alertas', icon: Bell },
+          { page: 'settings', label: 'Ajustes', icon: Settings },
+        ].map(({ page, label, icon: Icon }) => (
+          <TouchableOpacity
+            key={page}
+            style={styles.navItem}
+            onPress={() => {
+              if (page === 'config') {
+                setIsInsideDetails(true);
+              } else {
+                setCurrentPage(page);
+                setIsInsideDetails(false);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Icon
+              size={18}
+              color={
+                currentPage === page || (page === 'config' && isInsideDetails)
+                  ? colors.emerald
+                  : colors.zinc[500]
+              }
+            />
+            <Text
+              style={[
+                styles.navLabel,
+                (currentPage === page || (page === 'config' && isInsideDetails)) && {
+                  color: colors.emerald,
+                },
+              ]}
+            >
+              {label}
+            </Text>
+            {(currentPage === page || (page === 'config' && isInsideDetails)) && (
+              <View style={styles.navDot} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Add Greenhouse Modal */}
+      <Modal
+        visible={showAddModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <SafeAreaView style={styles.modal}>
+          <View style={styles.modalOverlay} />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Adicionar Nova Estufa</Text>
+              <TouchableOpacity
+                onPress={() => setShowAddModal(false)}
+                activeOpacity={0.7}
+              >
+                <X size={20} color={colors.zinc[400]} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalForm}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Nome da Estufa</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Estufa Delta"
+                  placeholderTextColor={colors.zinc[500]}
+                  value={newGhName}
+                  onChangeText={setNewGhName}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Setor</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginTop: 8 }}
+                >
+                  {['Setor Norte', 'Setor Sul', 'Setor Leste', 'Setor Oeste'].map((sector) => (
+                    <TouchableOpacity
+                      key={sector}
+                      style={[
+                        styles.sectorButton,
+                        newGhSector === sector && {
+                          backgroundColor: colors.emerald,
+                        },
+                      ]}
+                      onPress={() => setNewGhSector(sector)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.sectorButtonText,
+                          newGhSector === sector && { color: 'black' },
+                        ]}
+                      >
+                        {sector}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={handleCreateGreenhouse}
+                activeOpacity={0.7}
+              >
+                <Plus size={16} color="black" />
+                <Text style={styles.createButtonText}>Criar Estufa</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.dark,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.darkSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  logo: {
+    padding: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoSubtitle: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: colors.emerald,
+    letterSpacing: 0.5,
+    fontFamily: 'monospace',
+    marginBottom: 2,
+  },
+  logoTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: 'white',
+    letterSpacing: 0.3,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerButton: {
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.zinc[800],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.zinc[900],
+  },
+  headerButtonText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.zinc[400],
+    letterSpacing: 0.3,
+  },
+  content: {
+    flex: 1,
+    paddingBottom: 80,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+  },
+  console: {
+    backgroundColor: 'rgba(8, 13, 10, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(16, 185, 129, 0.3)',
+    maxHeight: 180,
+    padding: 12,
+  },
+  consoleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(16, 185, 129, 0.25)',
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  consoleTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.emerald,
+    letterSpacing: 0.5,
+    fontFamily: 'monospace',
+  },
+  consoleEmpty: {
+    fontSize: 11,
+    color: colors.zinc[600],
+  },
+  logEntry: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(51, 51, 51, 0.3)',
+  },
+  logTime: {
+    fontSize: 9,
+    color: colors.zinc[600],
+    fontFamily: 'monospace',
+  },
+  logSource: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.zinc[500],
+    fontFamily: 'monospace',
+    minWidth: 60,
+  },
+  logMessage: {
+    fontSize: 9,
+    color: colors.zinc[300],
+    flex: 1,
+    fontFamily: 'monospace',
+  },
+  card: {
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    backgroundColor: colors.darkTertiary,
+  },
+  cardContent: {
+    gap: 16,
+  },
+  greeting: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: 'white',
+  },
+  subGreeting: {
+    fontSize: 12,
+    color: colors.zinc[400],
+    lineHeight: 18,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  metricCard: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderWidth: 1,
+    borderColor: colors.zinc[900],
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  metricIcon: {
+    marginBottom: 4,
+  },
+  metricLabel: {
+    fontSize: 8,
+    color: colors.zinc[500],
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  metricValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'white',
+    marginTop: 2,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: colors.zinc[400],
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 9,
+    color: colors.zinc[500],
+    marginBottom: 12,
+  },
+  greenhouseCard: {
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+    backgroundColor: colors.darkSecondary,
+    marginBottom: 12,
+  },
+  ghHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  ghTitleSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  ghName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'white',
+  },
+  ghSector: {
+    fontSize: 9,
+    color: colors.zinc[500],
+    marginTop: 2,
+  },
+  heartbeat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  heartbeatText: {
+    fontSize: 8,
+    fontWeight: '600',
+  },
+  telemetryGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  telemetryItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 8,
+  },
+  telemetryValue: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'white',
+  },
+  addButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: colors.zinc[950],
+    borderWidth: 1,
+    borderColor: colors.zinc[900],
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  addButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.emerald,
+    letterSpacing: 0.3,
+  },
+  detailsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: colors.zinc[900],
+  },
+  backButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.zinc[900],
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.zinc[300],
+  },
+  detailsTitle: {
+    alignItems: 'flex-end',
+  },
+  detailsTitleLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: colors.zinc[500],
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  detailsTitleName: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: 'white',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: colors.zinc[950],
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: colors.zinc[900],
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabButtonActive: {
+    backgroundColor: colors.emerald,
+  },
+  tabButtonText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.zinc[400],
+  },
+  tabButtonTextActive: {
+    color: 'black',
+  },
+  tabContent: {
+    gap: 16,
+  },
+  sensorPanel: {
+    gap: 12,
+  },
+  panelTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.emerald,
+    letterSpacing: 0.3,
+    marginBottom: 8,
+  },
+  sensorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  sensorCard: {
+    width: '48%',
+    padding: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.zinc[900],
+    alignItems: 'center',
+  },
+  sensorLabel: {
+    fontSize: 8,
+    color: colors.zinc[500],
+    marginTop: 6,
+    fontWeight: '600',
+  },
+  sensorValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: 'white',
+    marginTop: 2,
+  },
+  sensorRange: {
+    fontSize: 8,
+    color: colors.zinc[600],
+    marginTop: 4,
+  },
+  actuatorsPanel: {
+    gap: 12,
+  },
+  actuatorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.zinc[900],
+  },
+  actuatorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  actuatorLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'white',
+  },
+  toggle: {
+    width: 40,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.zinc[800],
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'white',
+  },
+  limitsPanel: {
+    gap: 14,
+  },
+  inputGroup: {
+    gap: 6,
+  },
+  inputLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.zinc[300],
+  },
+  input: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.zinc[900],
+    color: 'white',
+    fontSize: 12,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    backgroundColor: colors.emerald,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  saveButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'black',
+  },
+  metricsPanel: {
+    gap: 12,
+  },
+  metricsInfo: {
+    fontSize: 10,
+    color: colors.zinc[400],
+    lineHeight: 15,
+  },
+  metricsChart: {
+    gap: 12,
+    paddingVertical: 12,
+  },
+  metricRow: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.emerald,
+  },
+  metricRowLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.zinc[300],
+    marginBottom: 4,
+  },
+  metricRowValues: {
+    fontSize: 8,
+    color: colors.emerald,
+    fontWeight: '600',
+    fontFamily: 'monospace',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  emptyStateText: {
+    fontSize: 12,
+    color: colors.zinc[300],
+    fontWeight: '600',
+  },
+  alertsList: {
+    gap: 12,
+  },
+  alertCard: {
+    padding: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.emeraldDark,
+    borderWidth: 1,
+    borderColor: colors.zinc[900],
+    gap: 8,
+  },
+  alertHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  alertTitleSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    flex: 1,
+  },
+  alertTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'white',
+  },
+  alertGreenhouse: {
+    fontSize: 9,
+    color: colors.zinc[500],
+    marginTop: 2,
+  },
+  alertTime: {
+    fontSize: 8,
+    color: colors.zinc[500],
+  },
+  alertMessage: {
+    fontSize: 10,
+    color: colors.zinc[300],
+    lineHeight: 14,
+  },
+  resolveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.emerald,
+    marginTop: 4,
+  },
+  resolveButtonText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: colors.emerald,
+  },
+  usersSection: {
+    gap: 10,
+    marginBottom: 24,
+  },
+  subsectionTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.zinc[300],
+    letterSpacing: 0.3,
+    marginBottom: 10,
+  },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 10,
+    gap: 10,
+  },
+  userAvatar: {
+    fontSize: 20,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'white',
+  },
+  userRole: {
+    fontSize: 8,
+    color: colors.zinc[500],
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  userStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  statusIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  userStatusText: {
+    fontSize: 8,
+    fontWeight: '600',
+  },
+  dbSection: {
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  dbInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dbText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.emerald,
+  },
+  dbDetails: {
+    fontSize: 9,
+    color: colors.zinc[400],
+    marginTop: 6,
+    lineHeight: 13,
+  },
+  securityNote: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+    borderRadius: 10,
+    gap: 8,
+  },
+  securityNoteTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'white',
+  },
+  securityNoteText: {
+    fontSize: 9,
+    color: colors.zinc[300],
+    lineHeight: 13,
+  },
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(8, 12, 9, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    flex: 1,
+    gap: 4,
+  },
+  navLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: colors.zinc[500],
+    letterSpacing: 0.2,
+  },
+  navDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.emerald,
+    marginTop: 2,
+  },
+  modal: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+  },
+  modalContent: {
+    backgroundColor: colors.darkSecondary,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+    borderWidth: 1,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.zinc[900],
+  },
+  modalTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: 'white',
+    letterSpacing: 0.3,
+  },
+  modalForm: {
+    gap: 16,
+  },
+  sectorButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: colors.zinc[900],
+    borderRadius: 8,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: colors.zinc[800],
+  },
+  sectorButtonText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: colors.zinc[400],
+  },
+  createButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    backgroundColor: colors.emerald,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  createButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'black',
+    letterSpacing: 0.2,
+  },
+});
