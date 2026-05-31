@@ -25,11 +25,12 @@ export function setupMqttHandlers(
   mqttClient: MqttClient,
   io: SocketServer<ClientToServerEvents, ServerToClientEvents>
 ) {
-  // Subscribe to all agrotech topics (wildcard)
-  mqttClient.subscribe('agrotech/+/sensores/#', { qos: 0 });
-  mqttClient.subscribe('agrotech/+/status/#',   { qos: 1 });
-
   mqttClient.on('message', async (topic, rawPayload) => {
+    // Ignora mensagens do próprio backend
+     console.log('>>> MENSAGEM BRUTA:', topic, rawPayload.toString());
+    if (topic === 'agrotech/backend/status') return;
+
+    logger.info('MQTT mensagem recebida', { topic });
     let payload: unknown;
     try {
       payload = JSON.parse(rawPayload.toString());
@@ -74,6 +75,7 @@ async function handleSensorData(
   io: SocketServer<ClientToServerEvents, ServerToClientEvents>
 ) {
   // RN12: Validate reading — block automation and alert on invalid sensor
+  
   const validationError = sensorsSvc.validateReading(data);
   if (validationError) {
     logger.error('Sensor hardware failure detected', { greenhouseId, validationError, data });
@@ -162,13 +164,13 @@ async function checkThresholds(
 
   const checks: Array<{ condition: boolean; key: string; type: Parameters<typeof alertsSvc.create>[1]; msg: string }> = [
     {
-      condition: data.temp > 35 || data.temp < 5,
+      condition: data.temp != null && (data.temp > 35 || data.temp < 5),
       key: `anomaly:temp:${greenhouseId}`,
       type: 'TEMP_CRITICAL',
       msg: `Temperature out of safe range: ${data.temp}°C`,
     },
     {
-      condition: data.umid_solo < 15,
+      condition: data.umid_solo != null && data.umid_solo < 15,
       key: `anomaly:soil:${greenhouseId}`,
       type: 'HUMIDITY_CRITICAL',
       msg: `Soil humidity critically low: ${data.umid_solo}%`,

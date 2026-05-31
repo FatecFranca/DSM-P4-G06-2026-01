@@ -1,13 +1,17 @@
 // src/server.ts
-import http from 'http';
 import './config/env'; // validate env first
 import { env } from './config/env';
+import http from 'http';
 import { logger } from './config/logger';
 import { prisma, closeConnections } from './config/database';
 import { createApp } from './app';
 import { connectMqtt } from './mqtt/mqtt.client';
 import { setupMqttHandlers, checkHeartbeats } from './mqtt/mqtt.handler';
 import { createSocketServer } from './realtime/socket.server';
+
+
+console.log('MQTT_CLIENT_ID:', env.MQTT_CLIENT_ID);
+console.log('MQTT_URL:', env.MQTT_URL);
 
 async function bootstrap() {
   // ─── Test DB connection ────────────────────────────────────────────────────

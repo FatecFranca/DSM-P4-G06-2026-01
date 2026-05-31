@@ -13,10 +13,11 @@ export interface AuthenticatedRequest extends Request {
 
 /** Upstream: ESP32 → Backend (RN07, RN08) */
 export interface SensorPayload {
-  temp: number;        // °C
-  umid_ar: number;     // % relative humidity
-  umid_solo: number;   // % soil moisture
-  luz: number;         // LDR raw value
+  temp:      number | null;
+  umid_ar:   number | null;
+  temp_solo: number | null;
+  umid_solo: number | null;
+  luz:       number | null;
 }
 
 /** Upstream: actuator state confirmation */
