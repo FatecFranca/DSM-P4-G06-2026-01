@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Thermometer, Droplet, Sun, Zap } from 'lucide-react';
+import { Thermometer, Droplet, Sun } from 'lucide-react';
 import { Greenhouse } from '../types';
 import { getStatusBgColor } from '../utils';
 
@@ -8,13 +8,15 @@ interface GreenhouseDetailsPageProps {
   onBack: () => void;
   onToggleActuator: (ghId: string, actuator: 'lampada' | 'exaustor' | 'bomba') => void;
   onUpdateLimits: (ghId: string, limits: Partial<Greenhouse['limits']>) => void;
+  onDeleteGreenhouse: (ghId: string) => void;
 }
 
 export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
   selectedGreenhouse,
   onBack,
   onToggleActuator,
-  onUpdateLimits
+  onUpdateLimits,
+  onDeleteGreenhouse
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'limits' | 'metrics'>('overview');
   const [limitTempMin, setLimitTempMin] = useState(selectedGreenhouse.limits.tempMin);
@@ -36,6 +38,27 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
                     selectedGreenhouse.sensors.temp > selectedGreenhouse.limits.tempMax;
   const isSoilOut = selectedGreenhouse.sensors.umid_solo < selectedGreenhouse.limits.umidSoloMin || 
                     selectedGreenhouse.sensors.umid_solo > selectedGreenhouse.limits.umidSoloMax;
+  const tempHistory = selectedGreenhouse.history.temp;
+  const soilHistory = selectedGreenhouse.history.umid_solo;
+  const hasTempHistory = tempHistory.length > 0;
+  const maxTemp = hasTempHistory ? Math.max(...tempHistory) : 0;
+  const minTemp = hasTempHistory ? Math.min(...tempHistory) : 0;
+  const tempRange = Math.max(maxTemp - minTemp, 1);
+  const tempChartPoints = hasTempHistory
+    ? tempHistory
+        .map((value, index) => {
+          const x = tempHistory.length === 1 ? 0 : (index / (tempHistory.length - 1)) * 360;
+          const y = 180 - ((value - minTemp) / tempRange) * 150;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(' ')
+    : '';
+  const averageTemp = hasTempHistory
+    ? tempHistory.reduce((total, value) => total + value, 0) / tempHistory.length
+    : null;
+  const averageSoil = soilHistory.length
+    ? soilHistory.reduce((total, value) => total + value, 0) / soilHistory.length
+    : null;
 
   return (
     <div className="space-y-6">
@@ -55,18 +78,30 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
           </div>
         </div>
 
-        <div className="p-3 bg-zinc-950 border border-emerald-950/30 rounded-2xl flex items-center gap-4">
-          <div>
-            <span className="text-[9px] text-zinc-500 uppercase block font-bold">Último Heartbeat</span>
-            <span className="text-xs font-mono font-bold text-white">{selectedGreenhouse.lastSeen}</span>
-          </div>
-          <span
-            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusBgColor(
-              selectedGreenhouse.heartbeat ? 'healthy' : 'offline'
-            )}`}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (window.confirm('Tem certeza que deseja deletar esta estufa? Essa ação não pode ser desfeita.')) {
+                onDeleteGreenhouse(selectedGreenhouse.id);
+              }
+            }}
+            className="px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white border border-rose-900 rounded-xl text-xs font-bold transition-all"
           >
-            {selectedGreenhouse.sector}
-          </span>
+            Deletar Estufa
+          </button>
+          <div className="p-3 bg-zinc-950 border border-emerald-950/30 rounded-2xl flex items-center gap-4">
+            <div>
+              <span className="text-[9px] text-zinc-500 uppercase block font-bold">Último Heartbeat</span>
+              <span className="text-xs font-mono font-bold text-white">{selectedGreenhouse.lastSeen}</span>
+            </div>
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusBgColor(
+                selectedGreenhouse.heartbeat ? 'healthy' : 'offline'
+              )}`}
+            >
+              {selectedGreenhouse.sector}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -304,10 +339,9 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
 
           <div className="h-60 w-full bg-zinc-950 border border-zinc-900 rounded-2xl p-4 relative flex items-end">
             <div className="absolute left-4 top-4 bottom-4 flex flex-col justify-between text-[10px] font-mono text-zinc-600 select-none border-r border-zinc-900/50 pr-2">
-              <span>35°C</span>
-              <span>28°C</span>
-              <span>21°C</span>
-              <span>14°C</span>
+              <span>{hasTempHistory ? `${maxTemp.toFixed(1)}°C` : '--'}</span>
+              <span>{hasTempHistory ? `${((maxTemp + minTemp) / 2).toFixed(1)}°C` : '--'}</span>
+              <span>{hasTempHistory ? `${minTemp.toFixed(1)}°C` : '--'}</span>
             </div>
 
             <div className="flex-1 h-full pl-12 relative">
@@ -324,18 +358,19 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
                     <stop offset="100%" stopColor="#4ade80" stopOpacity="0" />
                   </linearGradient>
                 </defs>
-                <polyline
-                  points="0,150 45,120 90,100 135,80 180,60 225,70 270,100 315,120 360,150"
-                  fill="url(#tempGradient)"
-                  stroke="#22c55e"
-                  strokeWidth="2"
-                />
+                {hasTempHistory && (
+                  <polyline
+                    points={tempChartPoints}
+                    fill="none"
+                    stroke="#22c55e"
+                    strokeWidth="2"
+                  />
+                )}
               </svg>
 
               <div className="absolute bottom-1 left-0 right-0 flex justify-between text-[9px] font-mono text-zinc-600 px-4">
-                <span>18:00</span>
-                <span>19:30</span>
-                <span>Agora (Real-time)</span>
+                <span>{hasTempHistory ? 'Inicio da amostra' : 'Sem historico'}</span>
+                <span>{hasTempHistory ? 'Ultimas 12h' : 'Aguardando InfluxDB'}</span>
               </div>
             </div>
           </div>
@@ -344,24 +379,24 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
             <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-900">
               <span className="text-[10px] text-zinc-500 uppercase block font-medium">Temp Média</span>
               <span className="text-sm font-mono font-bold text-zinc-200">
-                {(selectedGreenhouse.history.temp.reduce((a, b) => a + b) / selectedGreenhouse.history.temp.length).toFixed(1)} °C
+                {averageTemp === null ? '--' : `${averageTemp.toFixed(1)} °C`}
               </span>
             </div>
             <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-900">
               <span className="text-[10px] text-zinc-500 uppercase block font-medium">Temp Pico</span>
               <span className="text-sm font-mono font-bold text-rose-500">
-                {Math.max(...selectedGreenhouse.history.temp).toFixed(1)} °C
+                {hasTempHistory ? `${maxTemp.toFixed(1)} °C` : '--'}
               </span>
             </div>
             <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-900">
               <span className="text-[10px] text-zinc-500 uppercase block font-medium">Solo Média</span>
               <span className="text-sm font-mono font-bold text-emerald-400">
-                {(selectedGreenhouse.history.umid_solo.reduce((a, b) => a + b) / selectedGreenhouse.history.umid_solo.length).toFixed(1)} %
+                {averageSoil === null ? '--' : `${averageSoil.toFixed(1)} %`}
               </span>
             </div>
             <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-900">
               <span className="text-[10px] text-zinc-500 uppercase block font-medium">Tamanho Amostra</span>
-              <span className="text-sm font-mono font-bold text-zinc-400">12h</span>
+              <span className="text-sm font-mono font-bold text-zinc-400">{tempHistory.length}</span>
             </div>
           </div>
         </div>

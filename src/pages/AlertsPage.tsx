@@ -1,13 +1,19 @@
 import { CheckCircle, ShieldAlert } from 'lucide-react';
-import { Alert } from '../types';
+import { useAlerts } from '../hooks/useAlerts';
 import { getAlertBgColor, getAlertIconColor } from '../utils';
 
-interface AlertsPageProps {
-  alerts: Alert[];
-  onResolveAlert: (alertId: string) => void;
-}
+export const AlertsPage: React.FC = () => {
+  const token = localStorage.getItem('token') ?? '';
+  const { alerts, resolveAlert, loading, error } = useAlerts({ token });
 
-export const AlertsPage: React.FC<AlertsPageProps> = ({ alerts, onResolveAlert }) => {
+  if (loading) {
+    return <div className="text-center text-zinc-400">Carregando alarmes...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">{error}</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -36,9 +42,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ alerts, onResolveAlert }
               )} ${alert.resolved ? 'opacity-50' : ''}`}
             >
               <div className="flex items-start gap-3">
-                <div
-                  className={`p-2 rounded-xl border ${getAlertIconColor(alert.type)}`}
-                >
+                <div className={`p-2 rounded-xl border ${getAlertIconColor(alert.type)}`}>
                   <ShieldAlert size={16} />
                 </div>
                 <div className="flex-1">
@@ -52,8 +56,8 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ alerts, onResolveAlert }
                       alert.type === 'critical'
                         ? 'bg-rose-950/60 text-rose-400 border-rose-900/40'
                         : alert.type === 'warning'
-                        ? 'bg-yellow-950/60 text-yellow-400 border-yellow-900/40'
-                        : 'bg-sky-950/60 text-sky-400 border-sky-900/40'
+                          ? 'bg-yellow-950/60 text-yellow-400 border-yellow-900/40'
+                          : 'bg-sky-950/60 text-sky-400 border-sky-900/40'
                     }`}
                   >
                     {alert.metric}
@@ -68,7 +72,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ alerts, onResolveAlert }
                   </span>
                 ) : (
                   <button
-                    onClick={() => onResolveAlert(alert.id)}
+                    onClick={() => resolveAlert(alert.id)}
                     className="text-[9px] font-mono font-bold px-3 py-1.5 rounded bg-emerald-500 hover:bg-emerald-400 text-black transition-all"
                   >
                     Marcar como Resolvido

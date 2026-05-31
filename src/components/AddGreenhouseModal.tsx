@@ -1,4 +1,4 @@
-import { Leaf, Plus } from 'lucide-react';
+import { Leaf } from 'lucide-react';
 import { FormEvent } from 'react';
 
 interface AddGreenhouseModalProps {
