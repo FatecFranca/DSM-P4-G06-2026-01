@@ -3,9 +3,13 @@ import { Leaf, Bell, UserCheck } from 'lucide-react';
 interface HeaderProps {
   activeAlertsCount: number;
   onAlertsClick: () => void;
+  userName?: string;
+  userRole?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeAlertsCount, onAlertsClick }) => {
+export const Header: React.FC<HeaderProps> = ({ activeAlertsCount, onAlertsClick, userName, userRole }) => {
+  const displayName = userName || 'Usuário';
+  const displayRole = userRole ? `(${userRole})` : '';
   return (
     <header className="border-b border-emerald-950/40 bg-[#080b09]/90 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -58,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ activeAlertsCount, onAlertsClick
         <div className="flex items-center gap-2 bg-zinc-900/60 border border-zinc-800/80 px-3 py-1.5 rounded-xl">
           <UserCheck size={14} className="text-emerald-400" />
           <div className="text-left hidden sm:block">
-            <div className="text-xs font-bold leading-none text-zinc-100">Gabriel (Admin)</div>
+              <div className="text-xs font-bold leading-none text-zinc-100">{displayName} {displayRole}</div>
           </div>
         </div>
       </div>
