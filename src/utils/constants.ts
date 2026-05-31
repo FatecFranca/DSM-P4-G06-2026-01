@@ -1,3 +1,4 @@
+
 import { Greenhouse, Alert, User } from '../types';
 
 export const INITIAL_GREENHOUSES: Greenhouse[] = [
@@ -8,40 +9,35 @@ export const INITIAL_GREENHOUSES: Greenhouse[] = [
     status: 'healthy',
     phase: 'Vegetativo',
     sensors: {
-      temp: 24.2,
-      umid_ar: 58.5,
-      umid_solo: 62.1,
-      luz: 450,
-    },
-    limits: {
-      tempMin: 18,
-      tempMax: 28,
-      umidSoloMin: 40,
-      umidSoloMax: 80,
-      luzMin: 200,
-      luzMax: 800,
-    },
-    actuators: {
-      lampada: true,
-      exaustor: false,
-      bomba: false,
-    },
-    history: {
-      temp: [23.1, 23.4, 23.8, 24.0, 24.2, 24.2, 24.1, 24.2],
-      umid_ar: [55, 56, 57, 59, 58, 58, 58, 58.5],
-      umid_solo: [66, 65, 64, 63, 63, 62, 62, 62.1],
-    },
-    heartbeat: true,
-    lastSeen: 'Online',
-  },
-  {
-    id: 'gh-02',
-    name: 'Estufa Beta',
-    sector: 'Setor Sul',
-    status: 'warning',
-    phase: 'Clones',
-    sensors: {
-      temp: 29.5,
+      export const INITIAL_ALERTS: Alert[] = [
+        {
+          id: 'alert-1',
+          greenhouseId: 'gh-1',
+          greenhouseName: 'Estufa 1',
+          type: 'warning',
+          metric: 'Temperatura',
+          message: 'Temperatura crítica de 35°C na estufa Estufa 1.',
+          timestamp: 'Há 2 minutos',
+          resolved: false,
+        },
+      ];
+      export const INITIAL_USERS: User[] = [
+        {
+          id: 'user-1',
+          name: 'Admin',
+          email: 'admin@agro.com',
+          role: 'admin',
+        },
+      ];
+      export const INITIAL_LOGS = [
+        {
+          id: 1,
+          time: '12:00:01',
+          source: 'Sistema',
+          msg: 'Sistema iniciado',
+          type: 'info',
+        },
+      ];
       umid_ar: 42.1,
       umid_solo: 35.0,
       luz: 150,

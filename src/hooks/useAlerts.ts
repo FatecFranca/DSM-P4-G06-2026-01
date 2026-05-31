@@ -1,72 +1,67 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Alert } from '../types';
-import { INITIAL_ALERTS } from '../utils/constants';
+import * as alertService from '../services/alertService';
 
-export const useAlerts = () => {
-  const [alerts, setAlerts] = useState<Alert[]>(INITIAL_ALERTS);
+export const useAlerts = (token: string) => {
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const addAlert = (alert: Omit<Alert, 'id'>) => {
-    const newAlert: Alert = {
-      ...alert,
-      id: `alert-${Date.now()}`,
-    };
-    setAlerts((prev) => [newAlert, ...prev]);
-    return newAlert;
-  };
-
-  const resolveAlert = (alertId: string) => {
-    setAlerts((prev) =>
-      prev.map((alert) => {
-        if (alert.id === alertId) {
-          return { ...alert, resolved: true };
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    alertService
+      .getAlerts(token)
+      .then(data => {
+        if (mounted) {
+          setAlerts(data);
+          setError(null);
         }
-        return alert;
       })
-    );
-  };
+      .catch(() => {
+        if (mounted) setError('Erro ao buscar alertas');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [token]);
 
-  const triggerAlertFromTelemetry = (
-    gh: { id: string; name: string; limits: any; sensors: any },
-    sensors: any,
-    onAlert: (msg: string, metric: string) => void
-  ) => {
-    let msg = '';
-    let metric = '';
-    if (sensors.temp > gh.limits.tempMax) {
-      msg = `Temperatura crítica de ${sensors.temp}°C na estufa ${gh.name}.`;
-      metric = 'Temperatura';
-    } else if (sensors.umid_solo < gh.limits.umidSoloMin) {
-      msg = `Umidade do solo crítica de ${sensors.umid_solo}% detectada na estufa ${gh.name}.`;
-      metric = 'Umidade do Solo';
-    }
-
-    if (!msg) return;
-
-    const duplicate = alerts.some(
-      (a) => a.greenhouseId === gh.id && a.metric === metric && !a.resolved
-    );
-    if (duplicate) return;
-
-    addAlert({
-      greenhouseId: gh.id,
-      greenhouseName: gh.name,
-      type: 'warning',
-      metric,
-      message: msg,
-      timestamp: 'Agora mesmo',
-      resolved: false,
-    });
-
-    onAlert(metric, gh.name);
-  };
+  const resolveAlert = useCallback(
+    async (alertId: string) => {
+      try {
+        const updated = await alertService.resolveAlert(token, alertId);
+        setAlerts(prev =>
+          prev.map(alert => (alert.id === alertId ? { ...alert, ...updated } : alert))
+        );
+      } catch {
+        setError('Erro ao resolver alerta');
+      }
+    },
+    [token]
+  );
 
   const activeAlertsCount = alerts.filter((a) => !a.resolved).length;
 
+  // Add alert (backend)
+  const addAlert = async (alertData: any) => {
+    try {
+      const newAlert = await alertService.createAlert(token, alertData);
+      setAlerts((prev) => [...prev, newAlert]);
+      return newAlert;
+    } catch {
+      setError('Erro ao criar alerta');
+    }
+  };
+
   return {
     alerts,
-    addAlert,
     resolveAlert,
-    triggerAlertFromTelemetry,
     activeAlertsCount,
+    loading,
+    error,
+    addAlert,
   };
 };

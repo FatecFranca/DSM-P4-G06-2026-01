@@ -16,7 +16,6 @@
     "web": {
       "bundler": "metro"
     },
-    "sdkVersion": "54.0.0",
     "platforms": [
       "ios",
       "android",

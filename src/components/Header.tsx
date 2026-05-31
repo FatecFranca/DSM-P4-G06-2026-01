@@ -4,11 +4,14 @@ import { Leaf, RefreshCw, Database } from 'lucide-react-native';
 import { TouchableOpacity } from 'react-native';
 import { colors } from '../utils/colors';
 
+import { User } from '../types';
+
 interface HeaderProps {
   isSocketConnected: boolean;
   onSocketToggle: () => void;
   onConsoleToggle: () => void;
   showConsole: boolean;
+  user?: User | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSocketToggle,
   onConsoleToggle,
   showConsole,
+  user,
 }) => {
   return (
     <View style={styles.header}>
@@ -28,6 +32,17 @@ export const Header: React.FC<HeaderProps> = ({
           <Text style={styles.logoTitle}>Grower Console</Text>
         </View>
       </View>
+
+      {/* User info */}
+      {user && (
+        <View style={styles.userInfo}>
+          <Text style={styles.userAvatar}>{user.avatar}</Text>
+          <View>
+            <Text style={styles.userName}>{user.name}</Text>
+            <Text style={styles.userRole}>{user.role}</Text>
+          </View>
+        </View>
+      )}
 
       <View style={styles.headerActions}>
         <TouchableOpacity
@@ -78,6 +93,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginRight: 12,
+  },
+  userAvatar: {
+    fontSize: 18,
+    marginRight: 6,
+  },
+  userName: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'white',
+  },
+  userRole: {
+    fontSize: 8,
+    color: colors.zinc[500],
+    fontWeight: '600',
+  },
     backgroundColor: colors.darkSecondary,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(16, 185, 129, 0.15)',

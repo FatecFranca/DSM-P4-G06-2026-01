@@ -10,12 +10,15 @@ import {
 import { Thermometer, Droplet, Wind, Sun, Check, ArrowLeft } from 'lucide-react-native';
 import { Greenhouse } from '../types';
 import { colors } from '../utils/colors';
+import { useAuth } from '../context/AuthContext';
+import * as greenhouseService from '../services/greenhouseService';
 
 interface DetailsScreenProps {
   greenhouse: Greenhouse;
   onBack: () => void;
   onToggleActuator: (actuatorKey: keyof Greenhouse['actuators']) => void;
   onUpdateLimits: (limits: Greenhouse['limits']) => void;
+  onDelete?: (id: string) => void;
 }
 
 export const DetailsScreen: React.FC<DetailsScreenProps> = ({
@@ -23,7 +26,23 @@ export const DetailsScreen: React.FC<DetailsScreenProps> = ({
   onBack,
   onToggleActuator,
   onUpdateLimits,
+  onDelete,
 }) => {
+  const { token } = useAuth();
+  const [deleting, setDeleting] = useState(false);
+    // Delete greenhouse handler
+    const handleDelete = async () => {
+      if (!token) return;
+      setDeleting(true);
+      try {
+        await greenhouseService.deleteGreenhouse(token, greenhouse.id);
+        if (onDelete) onDelete(greenhouse.id);
+      } catch (e) {
+        // Optionally show error
+      } finally {
+        setDeleting(false);
+      }
+    };
   const [activeTab, setActiveTab] = useState<'overview' | 'limits' | 'metrics'>('overview');
   const [tempMin, setTempMin] = useState(String(greenhouse.limits.tempMin));
   const [tempMax, setTempMax] = useState(String(greenhouse.limits.tempMax));
@@ -66,6 +85,16 @@ export const DetailsScreen: React.FC<DetailsScreenProps> = ({
           <Text style={styles.detailsTitleLabel}>Visualizando</Text>
           <Text style={styles.detailsTitleName}>{greenhouse.name}</Text>
         </View>
+
+        {/* Delete button */}
+        <TouchableOpacity
+          style={[styles.deleteButton, deleting && { opacity: 0.5 }]}
+          onPress={handleDelete}
+          disabled={deleting}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.deleteButtonText}>Excluir</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tab buttons */}
@@ -234,6 +263,20 @@ export const DetailsScreen: React.FC<DetailsScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+    deleteButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: colors.rose[500],
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+    },
+    deleteButtonText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: 'white',
+    },
   scrollContent: {
     paddingHorizontal: 16,
     paddingVertical: 20,

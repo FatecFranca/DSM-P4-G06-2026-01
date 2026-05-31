@@ -1,24 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LogEntry } from '../types';
-import { INITIAL_LOGS } from '../utils/constants';
+import * as logService from '../services/logService';
 
-export const useLogs = () => {
-  const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
+export const useLogs = (token: string) => {
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const addLog = (source: string, msg: string, type: LogEntry['type'] = 'info') => {
-    const time = new Date().toLocaleTimeString();
-    const newLog: LogEntry = {
-      id: Date.now(),
-      time,
-      source,
-      msg,
-      type,
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    logService
+      .getLogs(token)
+      .then(data => {
+        if (mounted) {
+          // Map backend log fields to LogEntry if needed
+          const mapped = data.map((entry: any) => ({
+            id: entry.id,
+            time: entry.time || entry.timestamp,
+            source: entry.source || entry.level || 'APP',
+            msg: entry.msg || entry.message,
+            type: entry.type || entry.level || 'info',
+          }));
+          setLogs(mapped);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (mounted) setError('Erro ao buscar logs');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
     };
-    setLogs((prev) => [newLog, ...prev.slice(0, 20)]);
-  };
+  }, [token]);
 
   return {
     logs,
-    addLog,
+    loading,
+    error,
   };
 };

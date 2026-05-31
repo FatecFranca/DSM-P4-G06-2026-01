@@ -1,152 +1,72 @@
 import { useState, useEffect } from 'react';
 import { Greenhouse } from '../types';
-import { INITIAL_GREENHOUSES } from '../utils/constants';
+import * as greenhouseService from '../services/greenhouseService';
 
-export const useGreenhouses = () => {
-  const [greenhouses, setGreenhouses] = useState<Greenhouse[]>(INITIAL_GREENHOUSES);
-  const [selectedGreenhouse, setSelectedGreenhouse] = useState<Greenhouse>(INITIAL_GREENHOUSES[0]);
+export const useGreenhouses = (token: string) => {
+  const [greenhouses, setGreenhouses] = useState<Greenhouse[]>([]);
+  const [selectedGreenhouse, setSelectedGreenhouse] = useState<Greenhouse | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setGreenhouses((prevGHs) => {
-        const updated = prevGHs.map((gh) => {
-          if (!gh.heartbeat) return gh;
-
-          const nextSensors = { ...gh.sensors };
-          const nextActuators = { ...gh.actuators };
-
-          if (nextActuators.lampada) {
-            nextSensors.temp += Math.random() * 0.1;
-            nextSensors.luz = Math.min(800, nextSensors.luz + Math.round(Math.random() * 6));
-          } else {
-            nextSensors.temp -= Math.random() * 0.08;
-            nextSensors.luz = Math.max(20, nextSensors.luz - Math.round(Math.random() * 8));
-          }
-
-          if (nextActuators.exaustor) {
-            nextSensors.temp -= Math.random() * 0.12;
-            nextSensors.umid_ar = Math.max(30, nextSensors.umid_ar - Math.random() * 0.3);
-          } else {
-            nextSensors.temp += Math.random() * 0.04;
-            nextSensors.umid_ar = Math.min(80, nextSensors.umid_ar + Math.random() * 0.1);
-          }
-
-          if (nextActuators.bomba) {
-            nextSensors.umid_solo = Math.min(95, nextSensors.umid_solo + Math.random() * 2.2);
-            if (nextSensors.umid_solo >= 75) {
-              nextActuators.bomba = false;
-            }
-          } else {
-            nextSensors.umid_solo = Math.max(15, nextSensors.umid_solo - Math.random() * 0.05);
-          }
-
-          nextSensors.temp = parseFloat(Math.max(10, Math.min(45, nextSensors.temp)).toFixed(1));
-          nextSensors.umid_ar = parseFloat(Math.max(10, Math.min(100, nextSensors.umid_ar)).toFixed(1));
-          nextSensors.umid_solo = parseFloat(Math.max(5, Math.min(100, nextSensors.umid_solo)).toFixed(1));
-
-          let status: 'healthy' | 'warning' | 'offline' = 'healthy';
-          if (
-            nextSensors.temp < gh.limits.tempMin ||
-            nextSensors.temp > gh.limits.tempMax ||
-            nextSensors.umid_solo < gh.limits.umidSoloMin ||
-            nextSensors.umid_solo > gh.limits.umidSoloMax
-          ) {
-            status = 'warning';
-          }
-
-          return {
-            ...gh,
-            sensors: nextSensors,
-            actuators: nextActuators,
-            status,
-          };
-        });
-
-        const updatedSelected = updated.find((g) => g.id === selectedGreenhouse.id);
-        if (updatedSelected) {
-          setSelectedGreenhouse(updatedSelected);
+    let mounted = true;
+    setLoading(true);
+    greenhouseService
+      .getGreenhouses(token)
+      .then(data => {
+        if (mounted) {
+          setGreenhouses(data);
+          setSelectedGreenhouse(data[0] || null);
+          setError(null);
         }
-
-        return updated;
-      });
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [selectedGreenhouse.id]);
-
-  const toggleActuator = (ghId: string, actuatorKey: keyof Greenhouse['actuators']) => {
-    setGreenhouses((prev) =>
-      prev.map((gh) => {
-        if (gh.id === ghId) {
-          const nextVal = !gh.actuators[actuatorKey];
-          const updatedActuators = { ...gh.actuators, [actuatorKey]: nextVal };
-          return { ...gh, actuators: updatedActuators };
-        }
-        return gh;
       })
-    );
-  };
-
-  const addGreenhouse = (name: string, sector: string) => {
-    const newGh: Greenhouse = {
-      id: `gh-${Date.now()}`,
-      name,
-      sector,
-      status: 'healthy',
-      phase: 'Vegetativo',
-      sensors: {
-        temp: 24.0,
-        umid_ar: 60.0,
-        umid_solo: 55.0,
-        luz: 300,
-      },
-      limits: {
-        tempMin: 18,
-        tempMax: 28,
-        umidSoloMin: 45,
-        umidSoloMax: 85,
-        luzMin: 150,
-        luzMax: 700,
-      },
-      actuators: {
-        lampada: false,
-        exaustor: false,
-        bomba: false,
-      },
-      history: {
-        temp: [22, 23, 24, 24, 24, 24, 24, 24.0],
-        umid_ar: [55, 58, 60, 60, 60, 60, 60, 60.0],
-        umid_solo: [50, 52, 55, 55, 55, 55, 55, 55.0],
-      },
-      heartbeat: true,
-      lastSeen: 'Online',
+      .catch(() => {
+        if (mounted) setError('Erro ao buscar estufas');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
     };
+  }, [token]);
 
+  // Add greenhouse (backend)
+  const addGreenhouse = async (name: string, sector: string) => {
+    if (!token) return;
+    const newGh = await greenhouseService.createGreenhouse(token, { name, sector });
     setGreenhouses((prev) => [...prev, newGh]);
+    setSelectedGreenhouse(newGh);
     return newGh;
   };
 
-  const updateGreenhouseLimits = (ghId: string, limits: Greenhouse['limits']) => {
-    setGreenhouses((prev) =>
-      prev.map((gh) => {
-        if (gh.id === ghId) {
-          return { ...gh, limits };
-        }
-        return gh;
-      })
-    );
+  // Toggle actuator (backend)
+  const toggleActuator = async (id: string, actuatorKey: keyof Greenhouse['actuators']) => {
+    if (!token) return;
+    const updated = await greenhouseService.toggleActuator(token, id, actuatorKey);
+    setGreenhouses((prev) => prev.map((gh) => (gh.id === id ? updated : gh)));
+    setSelectedGreenhouse((prev) => (prev && prev.id === id ? updated : prev));
+    return updated;
+  };
 
-    if (selectedGreenhouse.id === ghId) {
-      setSelectedGreenhouse((prev) => ({ ...prev, limits }));
-    }
+  // Update limits (backend)
+  const updateGreenhouseLimits = async (id: string, limits: Greenhouse['limits']) => {
+    if (!token) return;
+    const updated = await greenhouseService.updateLimits(token, id, limits);
+    setGreenhouses((prev) => prev.map((gh) => (gh.id === id ? updated : gh)));
+    setSelectedGreenhouse((prev) => (prev && prev.id === id ? updated : prev));
+    return updated;
   };
 
   return {
     greenhouses,
+    setGreenhouses,
     selectedGreenhouse,
     setSelectedGreenhouse,
-    toggleActuator,
+    loading,
+    error,
     addGreenhouse,
+    toggleActuator,
     updateGreenhouseLimits,
   };
 };
