@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
+import { logger } from './config/logger';
 import { errorHandler } from './middlewares/errorHandler';
 import { authRouter } from './modules/auth/auth.router';
 import { greenhousesRouter } from './modules/greenhouses/greenhouses.router';
@@ -28,6 +29,24 @@ export function createApp() {
   // ─── Body parsing ───────────────────────────────────────────────────────────
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
+
+  // ─── Request logging ───────────────────────────────────────────────────────
+  app.use((req, res, next) => {
+    const startTime = Date.now();
+    res.on('finish', () => {
+      logger.info('HTTP request', {
+        method: req.method,
+        path: req.originalUrl,
+        status: res.statusCode,
+        duration_ms: Date.now() - startTime,
+        ip: req.ip,
+        query: req.query,
+        params: req.params,
+        body: req.body,
+      });
+    });
+    next();
+  });
 
   // ─── Health ─────────────────────────────────────────────────────────────────
   app.get('/health', (_req, res) => {
