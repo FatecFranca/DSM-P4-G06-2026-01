@@ -25,24 +25,46 @@ export function setupMqttHandlers(
   mqttClient: MqttClient,
   io: SocketServer<ClientToServerEvents, ServerToClientEvents>
 ) {
+
+  mqttClient.subscribe('agrotech/#', { qos: 1 }, (err, granted) => {
+    if (err) logger.error('Subscribe erro', { err });
+    else     logger.info('Subscribe aceito', { granted });
+  });
+  
   mqttClient.on('message', async (topic, rawPayload) => {
     // Ignora mensagens do próprio backend
-     console.log('>>> MENSAGEM BRUTA:', topic, rawPayload.toString());
+    const rawText = rawPayload.toString();
+    logger.info('MQTT payload recebido', { topic, payload: rawText });
     if (topic === 'agrotech/backend/status') return;
 
     logger.info('MQTT mensagem recebida', { topic });
     let payload: unknown;
     try {
-      payload = JSON.parse(rawPayload.toString());
+      payload = JSON.parse(rawText);
+      logger.info('MQTT payload JSON', { topic, payload });
     } catch {
-      logger.warn('Invalid JSON from MQTT', { topic });
+      logger.warn('Invalid JSON from MQTT', { topic, payload: rawText });
       return;
     }
 
-    const parts = topic.split('/'); // ['agrotech', '{ghId}', '{category}', '{subcategory}']
-    if (parts.length < 4 || parts[0] !== 'agrotech') return;
+    const parts = topic.split('/');
+    if (parts[0] !== 'agrotech') return;
 
-    const [, greenhouseId, category, subcategory] = parts;
+    const hasGreenhouseInTopic = parts.length >= 4;
+    const category = hasGreenhouseInTopic ? parts[2] : parts[1];
+    const subcategory = hasGreenhouseInTopic ? parts[3] : parts[2];
+    const greenhouseIdFromTopic = hasGreenhouseInTopic ? parts[1] : undefined;
+    const greenhouseIdFromPayload =
+      typeof payload === 'object' && payload !== null
+        ? (payload as { greenhouseId?: string; greenhouse_id?: string }).greenhouseId ??
+          (payload as { greenhouseId?: string; greenhouse_id?: string }).greenhouse_id
+        : undefined;
+
+    const greenhouseId = greenhouseIdFromTopic ?? greenhouseIdFromPayload;
+    if (!greenhouseId) {
+      logger.warn('Missing greenhouseId for MQTT message', { topic });
+      return;
+    }
 
     try {
       switch (`${category}/${subcategory}`) {
