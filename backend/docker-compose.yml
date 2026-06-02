@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -13,7 +11,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U agrotech']
+      test: ["CMD-SHELL", "pg_isready -U agrotech -d agrotech"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,7 +26,7 @@ services:
       DOCKER_INFLUXDB_INIT_USERNAME: admin
       DOCKER_INFLUXDB_INIT_PASSWORD: agrotech123
       DOCKER_INFLUXDB_INIT_ORG: agrotech
-      DOCKER_INFLUXDB_INIT_BUCKET: telemetry
+      DOCKER_INFLUXDB_INIT_BUCKET: agrotech_data
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: my-super-secret-token
     ports:
       - '8086:8086'
@@ -72,6 +70,7 @@ services:
     networks:
       - agrotech-network
 
+
   backend:
     build:
       context: .
@@ -102,6 +101,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+   
 
 volumes:
   pgdata:
