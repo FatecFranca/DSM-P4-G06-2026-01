@@ -53,6 +53,7 @@ cp .env.example .env
 docker-compose up postgres influxdb redis mosquitto -d
 
 
+
 # 3. Install dependencies
 npm install
 
@@ -140,4 +141,15 @@ npm run dev
 
 ```bash
 npm test
+```
+
+# Comandos Rapidos
+
+
+```bash
+
+docker-compose up
+
+docker exec -it agrotech-mosquitto mosquitto_sub -h localhost -t "agrotech/#" -v
+
 ```
