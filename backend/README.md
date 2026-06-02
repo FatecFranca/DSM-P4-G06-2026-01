@@ -44,7 +44,36 @@ src/
 
 ## Quick start
 
+
+
+# Metodo 2 (NEW)
+
 ```bash
+
+#RODANDO NO DOCKER TESTE#
+
+# 1. Copy env
+cp .env.example .env             #Cria arquivo env com base no env.example
+
+
+# 2. Install dependencies
+npm install
+
+# 3. Build docker
+
+docker compose up --build           #Inicia Bancos, Backend e Broker (CASO RODAR ESSE COMANDO O PROPRIO DOCKER CRIA AS MIGRATIONS)
+
+
+npm run dev
+```
+
+# Metodo 2 (OLD)
+
+```bash
+
+#INICIANDO BANCOS APENAS BANCOS NO DOCKER (Deve mudar url dos bancos no .env)  #
+# Exemplo: redis://redis:6379 para redis://localhost:6379
+
 # 1. Copy env
 cp .env.example .env
 
@@ -64,6 +93,7 @@ npm run db:generate
 # 5. Start dev server
 npm run dev
 ```
+
 
 ## API endpoints
 
