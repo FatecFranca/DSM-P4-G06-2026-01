@@ -44,4 +44,4 @@ EXPOSE 3000
 # Use tini as init process
 ENTRYPOINT ["/sbin/tini", "--"]
 
-CMD ["sh", "-c", "npx prisma generate && npx prisma db push && node dist/server.js"]
+CMD ["node", "dist/server.js"]
