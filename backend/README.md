@@ -46,7 +46,7 @@ src/
 
 
 
-# Metodo 2 (NEW)
+# Metodo 1 (NEW)
 
 ```bash
 
@@ -80,8 +80,6 @@ cp .env.example .env
 # 2. Start infrastructure
 
 docker-compose up postgres influxdb redis mosquitto -d
-
-
 
 # 3. Install dependencies
 npm install
