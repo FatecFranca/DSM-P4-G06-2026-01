@@ -244,7 +244,9 @@ GND  ── todos             │ GND                          │
 Copie o template e preencha:
 
 ```bash
-cp src/secrets.example.h src/secrets.h
+
+copy src\secrets.example.h src\secrets.h
+
 ```
 
 ```cpp
