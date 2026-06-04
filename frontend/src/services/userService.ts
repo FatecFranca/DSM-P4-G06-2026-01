@@ -1,10 +1,8 @@
 // src/services/userService.ts
 // Serviço central para chamadas à API de Usuários AgroTech
 
-import axios from 'axios';
 import { User } from '../types';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
+import apiClient from './apiClient';
 
 interface BackendUser {
   id: string;
@@ -14,10 +12,9 @@ interface BackendUser {
   active: boolean;
 }
 
-export async function getUsers(token: string): Promise<User[]> {
-  const res = await axios.get(`${API_BASE}/auth/users`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getUsers(_token: string): Promise<User[]> {
+  const res = await apiClient.get('/auth/users');
+  
   return res.data.users.map((user: BackendUser) => ({
     id: user.id,
     name: user.name,
