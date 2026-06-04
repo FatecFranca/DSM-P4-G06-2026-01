@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Greenhouse } from '../types';
 import * as actuatorService from '../services/actuatorService';
 import * as greenhouseService from '../services/greenhouseService';
+import { subscribeToGreenhouseTelemetry } from '../services/realtimeService';
 import * as sensorService from '../services/sensorService';
 
 interface UseGreenhousesOptions {
@@ -65,6 +66,7 @@ const toGreenhouse = async (token: string, gh: BackendGreenhouse): Promise<Green
 
   const sensors: Greenhouse['sensors'] = {
     temp: latest?.temp ?? 0,
+    temp_solo: latest?.temp_solo ?? 0,
     umid_ar: latest?.umid_ar ?? 0,
     umid_solo: latest?.umid_solo ?? 0,
     luz: latest?.luz ?? 0
@@ -80,6 +82,9 @@ const toGreenhouse = async (token: string, gh: BackendGreenhouse): Promise<Green
     umid_ar: historyRows.flatMap((row) => (typeof row.umid_ar === 'number' ? [row.umid_ar] : [])),
     umid_solo: historyRows.flatMap((row) =>
       typeof row.umid_solo === 'number' ? [row.umid_solo] : []
+    ),
+    temp_solo: historyRows.flatMap((row) =>
+      typeof row.temp_solo === 'number' ? [row.temp_solo] : []
     )
   };
 
@@ -106,6 +111,7 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
   const [greenhouses, setGreenhouses] = useState<Greenhouse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'unavailable'>('disconnected');
 
   const refreshGreenhouses = useCallback(async () => {
     if (!token) {
@@ -136,6 +142,80 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
       mounted = false;
     };
   }, [refreshGreenhouses]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let unsubscribe: (() => void) | undefined;
+    let active = true;
+
+    subscribeToGreenhouseTelemetry(
+      token,
+      (payload) => {
+        const greenhouseId = payload.greenhouseId ?? payload.id;
+        if (!greenhouseId) return;
+
+        setGreenhouses((prev) =>
+          prev.map((item) => {
+            if (item.id !== greenhouseId) return item;
+
+            const sensors = {
+              ...item.sensors,
+              ...payload.sensors,
+              ...(typeof payload.temp === 'number' && { temp: payload.temp }),
+              ...(typeof payload.temp_solo === 'number' && { temp_solo: payload.temp_solo }),
+              ...(typeof payload.umid_ar === 'number' && { umid_ar: payload.umid_ar }),
+              ...(typeof payload.umid_solo === 'number' && { umid_solo: payload.umid_solo }),
+              ...(typeof payload.luz === 'number' && { luz: payload.luz })
+            };
+
+            const next: Greenhouse = {
+              ...item,
+              ...payload,
+              id: item.id,
+              sensors,
+              history: {
+                temp: typeof sensors.temp === 'number' ? [...item.history.temp.slice(-47), sensors.temp] : item.history.temp,
+                temp_solo:
+                  typeof sensors.temp_solo === 'number'
+                    ? [...item.history.temp_solo.slice(-47), sensors.temp_solo]
+                    : item.history.temp_solo,
+                umid_ar:
+                  typeof sensors.umid_ar === 'number'
+                    ? [...item.history.umid_ar.slice(-47), sensors.umid_ar]
+                    : item.history.umid_ar,
+                umid_solo:
+                  typeof sensors.umid_solo === 'number'
+                    ? [...item.history.umid_solo.slice(-47), sensors.umid_solo]
+                    : item.history.umid_solo
+              },
+              heartbeat: true,
+              lastSeen: new Date().toLocaleTimeString()
+            };
+
+            return {
+              ...next,
+              status: getStatus(next)
+            };
+          })
+        );
+      },
+      (status) => {
+        if (active) setRealtimeStatus(status);
+      }
+    )
+      .then((cleanup) => {
+        unsubscribe = cleanup;
+      })
+      .catch(() => {
+        if (active) setRealtimeStatus('unavailable');
+      });
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, [token]);
 
   const addGreenhouse = useCallback(
     async (newGh: { name: string; description?: string }) => {
@@ -223,6 +303,7 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
     addGreenhouse,
     loading,
     error,
+    realtimeStatus,
     setGreenhouses
   };
 };
