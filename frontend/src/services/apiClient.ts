@@ -1,7 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import {
   clearSession,
-  getStoredRefreshToken,
   getStoredToken,
   persistSession
 } from './sessionStorage';
@@ -18,10 +17,6 @@ function extractToken(data: any): string {
   return data?.token ?? data?.accessToken ?? data?.access_token ?? '';
 }
 
-function extractRefreshToken(data: any): string {
-  return data?.refreshToken ?? data?.refresh_token ?? '';
-}
-
 apiClient.interceptors.request.use((config) => {
   const token = getStoredToken();
   if (token) {
@@ -33,17 +28,20 @@ apiClient.interceptors.request.use((config) => {
 let refreshRequest: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  const refreshToken = getStoredRefreshToken();
-  if (!refreshToken) throw new Error('Sessao expirada.');
+  const currentToken = getStoredToken();
+  if (!currentToken) throw new Error('Sessao expirada.');
 
   if (!refreshRequest) {
     refreshRequest = axios
-      .post(`${API_BASE}/auth/refresh`, { refreshToken })
+      .post(
+        `${API_BASE}/auth/refresh`,
+        {},
+        { headers: { Authorization: `Bearer ${currentToken}` } }
+      )
       .then((res) => {
         const token = extractToken(res.data);
-        const nextRefreshToken = extractRefreshToken(res.data) || refreshToken;
         if (!token) throw new Error('Token nao retornado pelo servidor.');
-        persistSession(token, res.data?.user, nextRefreshToken);
+        persistSession(token, res.data?.user);
         return token;
       })
       .finally(() => {
@@ -59,8 +57,12 @@ apiClient.interceptors.response.use(
   async (error: AxiosError<any>) => {
     const status = error.response?.status;
     const originalRequest = error.config as RetriableRequest | undefined;
+    const url = originalRequest?.url ?? '';
+    const isAuthRoute = ['/auth/login', '/auth/register', '/auth/refresh'].some((route) =>
+      url.includes(route)
+    );
 
-    if (status === 401 && originalRequest && !originalRequest._retry) {
+    if (status === 401 && originalRequest && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
       try {
         const token = await refreshAccessToken();

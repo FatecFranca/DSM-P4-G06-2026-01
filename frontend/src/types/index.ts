@@ -36,6 +36,7 @@ export interface History {
   temp_solo: number[];
   umid_ar: number[];
   umid_solo: number[];
+  luz: number[];
 }
 
 export interface Greenhouse {

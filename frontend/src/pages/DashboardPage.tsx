@@ -28,7 +28,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         gh.history.temp.length,
         (gh.history.temp_solo ?? []).length,
         gh.history.umid_ar.length,
-        gh.history.umid_solo.length
+        gh.history.umid_solo.length,
+        gh.history.luz.length
       ),
     0
   );

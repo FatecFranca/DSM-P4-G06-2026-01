@@ -85,7 +85,8 @@ const toGreenhouse = async (token: string, gh: BackendGreenhouse): Promise<Green
     ),
     temp_solo: historyRows.flatMap((row) =>
       typeof row.temp_solo === 'number' ? [row.temp_solo] : []
-    )
+    ),
+    luz: historyRows.flatMap((row) => (typeof row.luz === 'number' ? [row.luz] : []))
   };
 
   const mapped: Greenhouse = {
@@ -190,7 +191,8 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
                 umid_solo:
                   typeof sensors.umid_solo === 'number'
                     ? [...item.history.umid_solo.slice(-47), sensors.umid_solo]
-                    : item.history.umid_solo
+                    : item.history.umid_solo,
+                luz: typeof sensors.luz === 'number' ? [...item.history.luz.slice(-47), sensors.luz] : item.history.luz
               },
               heartbeat: true,
               lastSeen

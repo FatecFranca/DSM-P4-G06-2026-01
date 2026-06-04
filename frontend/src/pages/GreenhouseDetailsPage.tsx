@@ -91,7 +91,9 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
                     selectedGreenhouse.sensors.umid_solo > selectedGreenhouse.limits.umidSoloMax;
   const tempHistory = selectedGreenhouse.history.temp;
   const soilTempHistory = selectedGreenhouse.history.temp_solo ?? [];
+  const airHistory = selectedGreenhouse.history.umid_ar;
   const soilHistory = selectedGreenhouse.history.umid_solo;
+  const lightHistory = selectedGreenhouse.history.luz;
   const hasTempHistory = tempHistory.length > 0;
   const maxTemp = hasTempHistory ? Math.max(...tempHistory) : 0;
   const minTemp = hasTempHistory ? Math.min(...tempHistory) : 0;
@@ -109,14 +111,22 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
     ? soilTempHistory.reduce((total, value) => total + value, 0) / soilTempHistory.length
     : null;
   const maxSoilTemp = hasSoilTempHistory ? Math.max(...soilTempHistory) : 0;
-  const sampleSize = Math.max(tempHistory.length, soilTempHistory.length, soilHistory.length);
-  const tempTextHistory = tempHistory.slice(-8).map((value, index, values) => {
-    const previous = values[index - 1] ?? value;
-    const trend = value > previous ? 'subiu' : value < previous ? 'caiu' : 'manteve';
+  const sampleSize = Math.max(
+    tempHistory.length,
+    soilTempHistory.length,
+    airHistory.length,
+    soilHistory.length,
+    lightHistory.length
+  );
+  const textHistory = Array.from({ length: Math.min(sampleSize, 8) }, (_, index) => {
+    const sampleIndex = sampleSize - Math.min(sampleSize, 8) + index;
     return {
-      label: `Amostra ${Math.max(tempHistory.length - values.length + index + 1, 1)}`,
-      value,
-      trend
+      label: `Amostra ${sampleIndex + 1}`,
+      temp: tempHistory[sampleIndex],
+      temp_solo: soilTempHistory[sampleIndex],
+      umid_ar: airHistory[sampleIndex],
+      umid_solo: soilHistory[sampleIndex],
+      luz: lightHistory[sampleIndex]
     };
   });
   const statisticCards = [
@@ -512,14 +522,17 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
             <div className="bg-zinc-950/40 border border-zinc-900 rounded-lg p-5">
               <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">Historico textual</h4>
               <div className="space-y-3">
-                {tempTextHistory.length ? (
-                  tempTextHistory.map((item) => (
-                    <div key={item.label} className="flex items-center justify-between gap-3 border-b border-zinc-900 pb-2 last:border-0">
-                      <div>
-                        <span className="block text-xs text-zinc-300">{item.label}</span>
-                        <span className="text-[10px] text-zinc-500">Temperatura {item.trend}</span>
+                {textHistory.length ? (
+                  textHistory.map((item) => (
+                    <div key={item.label} className="border-b border-zinc-900 pb-2 last:border-0">
+                      <span className="block text-xs text-zinc-300 mb-2">{item.label}</span>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-mono">
+                        <span className="text-zinc-500">Temp: <strong className="text-emerald-300 font-bold">{item.temp === undefined ? '--' : `${item.temp.toFixed(1)} C`}</strong></span>
+                        <span className="text-zinc-500">Temp solo: <strong className="text-lime-300 font-bold">{item.temp_solo === undefined ? '--' : `${item.temp_solo.toFixed(1)} C`}</strong></span>
+                        <span className="text-zinc-500">Umid. ar: <strong className="text-cyan-300 font-bold">{item.umid_ar === undefined ? '--' : `${item.umid_ar.toFixed(1)} %`}</strong></span>
+                        <span className="text-zinc-500">Umid. solo: <strong className="text-blue-300 font-bold">{item.umid_solo === undefined ? '--' : `${item.umid_solo.toFixed(1)} %`}</strong></span>
+                        <span className="text-zinc-500">Luz: <strong className="text-amber-300 font-bold">{item.luz === undefined ? '--' : `${item.luz.toFixed(0)} lux`}</strong></span>
                       </div>
-                      <span className="font-mono text-sm text-emerald-300">{item.value.toFixed(1)} C</span>
                     </div>
                   ))
                 ) : (
