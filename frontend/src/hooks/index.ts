@@ -2,3 +2,4 @@ export { useGreenhouses } from './useGreenhouses';
 export { useAlerts } from './useAlerts';
 export { useTerminalLogs } from './useTerminalLogs';
 export { useUsers } from './useUsers';
+export { useAuth } from './useAuth';
