@@ -3,6 +3,18 @@ import { Greenhouse } from '../types';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 type SocketHandler = (payload: any) => void;
+type TelemetryPayload = Partial<Greenhouse> & {
+  greenhouseId?: string;
+  id?: string;
+  sensors?: Partial<Greenhouse['sensors']>;
+  latestTelemetry?: Partial<Greenhouse['sensors']> & { timestamp?: string };
+  temp?: number | null;
+  temp_solo?: number | null;
+  umid_ar?: number | null;
+  umid_solo?: number | null;
+  luz?: number | null;
+  timestamp?: string;
+};
 
 interface SocketLike {
   on: (event: string, handler: SocketHandler) => void;
@@ -38,18 +50,7 @@ function loadSocketClient() {
 
 export async function subscribeToGreenhouseTelemetry(
   token: string,
-  onTelemetry: (
-    payload: Partial<Greenhouse> & {
-      greenhouseId?: string;
-      id?: string;
-      sensors?: Partial<Greenhouse['sensors']>;
-      temp?: number;
-      temp_solo?: number;
-      umid_ar?: number;
-      umid_solo?: number;
-      luz?: number;
-    }
-  ) => void,
+  onTelemetry: (payload: TelemetryPayload) => void,
   onStatus?: (status: 'connected' | 'disconnected') => void
 ) {
   const io = await loadSocketClient();

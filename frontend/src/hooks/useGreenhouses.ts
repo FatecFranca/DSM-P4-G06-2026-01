@@ -154,6 +154,9 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
       (payload) => {
         const greenhouseId = payload.greenhouseId ?? payload.id;
         if (!greenhouseId) return;
+        const telemetry = payload.latestTelemetry ?? payload;
+        const lastSeen =
+          payload.latestTelemetry?.timestamp ?? payload.timestamp ?? new Date().toLocaleTimeString();
 
         setGreenhouses((prev) =>
           prev.map((item) => {
@@ -162,11 +165,11 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
             const sensors = {
               ...item.sensors,
               ...payload.sensors,
-              ...(typeof payload.temp === 'number' && { temp: payload.temp }),
-              ...(typeof payload.temp_solo === 'number' && { temp_solo: payload.temp_solo }),
-              ...(typeof payload.umid_ar === 'number' && { umid_ar: payload.umid_ar }),
-              ...(typeof payload.umid_solo === 'number' && { umid_solo: payload.umid_solo }),
-              ...(typeof payload.luz === 'number' && { luz: payload.luz })
+              ...(typeof telemetry.temp === 'number' && { temp: telemetry.temp }),
+              ...(typeof telemetry.temp_solo === 'number' && { temp_solo: telemetry.temp_solo }),
+              ...(typeof telemetry.umid_ar === 'number' && { umid_ar: telemetry.umid_ar }),
+              ...(typeof telemetry.umid_solo === 'number' && { umid_solo: telemetry.umid_solo }),
+              ...(typeof telemetry.luz === 'number' && { luz: telemetry.luz })
             };
 
             const next: Greenhouse = {
@@ -190,7 +193,7 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
                     : item.history.umid_solo
               },
               heartbeat: true,
-              lastSeen: new Date().toLocaleTimeString()
+              lastSeen
             };
 
             return {
