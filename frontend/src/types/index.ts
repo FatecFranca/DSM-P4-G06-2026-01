@@ -1,8 +1,16 @@
 export type PageType = 'dashboard' | 'greenhouses' | 'greenhouse-details' | 'alerts' | 'users';
 export type TabType = 'overview' | 'limits' | 'metrics';
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'ADMIN' | 'MONITOR';
+}
+
 export interface Sensor {
   temp: number;
+  temp_solo: number;
   umid_ar: number;
   umid_solo: number;
   luz: number;
@@ -25,6 +33,7 @@ export interface Actuators {
 
 export interface History {
   temp: number[];
+  temp_solo: number[];
   umid_ar: number[];
   umid_solo: number[];
 }

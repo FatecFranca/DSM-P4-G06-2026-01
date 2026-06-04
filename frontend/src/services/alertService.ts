@@ -1,10 +1,8 @@
 // src/services/alertService.ts
 // Serviço central para chamadas à API de Alertas AgroTech
 
-import axios from 'axios';
 import { Alert } from '../types';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
+import apiClient from './apiClient';
 
 interface BackendAlert {
   id: string;
@@ -43,9 +41,8 @@ const mapAlert = (alert: BackendAlert): Alert => {
   };
 };
 
-export async function getAlerts(token: string, params?: { greenhouse?: string; status?: string }): Promise<Alert[]> {
-  const res = await axios.get(`${API_BASE}/alerts`, {
-    headers: { Authorization: `Bearer ${token}` },
+export async function getAlerts(_token: string, params?: { greenhouse?: string; status?: string }): Promise<Alert[]> {
+  const res = await apiClient.get('/alerts', {
     params: {
       greenhouseId: params?.greenhouse,
       status: params?.status
@@ -54,20 +51,12 @@ export async function getAlerts(token: string, params?: { greenhouse?: string; s
   return res.data.map(mapAlert);
 }
 
-export async function acknowledgeAlert(token: string, id: string): Promise<Alert> {
-  const res = await axios.patch(
-    `${API_BASE}/alerts/${id}/acknowledge`,
-    {},
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+export async function acknowledgeAlert(_token: string, id: string): Promise<Alert> {
+  const res = await apiClient.patch(`/alerts/${id}/acknowledge`, {});
   return mapAlert(res.data);
 }
 
-export async function resolveAlert(token: string, id: string): Promise<Alert> {
-  const res = await axios.patch(
-    `${API_BASE}/alerts/${id}/resolve`,
-    {},
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+export async function resolveAlert(_token: string, id: string): Promise<Alert> {
+  const res = await apiClient.patch(`/alerts/${id}/resolve`, {});
   return mapAlert(res.data);
 }

@@ -1,29 +1,21 @@
 // src/services/actuatorService.ts
 // Serviço central para chamadas à API de Atuadores AgroTech
 
-import axios from 'axios';
+import apiClient from './apiClient';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
-
-export async function getActuators(token: string, id: string) {
-  const res = await axios.get(`${API_BASE}/actuators/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getActuators(_token: string, id: string) {
+  const res = await apiClient.get(`/actuators/${id}`);
   return res.data;
 }
 
-export async function sendManualCommand(token: string, greenhouseId: string, name: string, state: boolean, timeoutSecs?: number) {
+export async function sendManualCommand(_token: string, greenhouseId: string, name: string, state: boolean, timeoutSecs?: number) {
   const body: any = { state };
   if (timeoutSecs) body.timeoutSecs = timeoutSecs;
-  const res = await axios.post(`${API_BASE}/actuators/${greenhouseId}/${name}/command`, body, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await apiClient.post(`/actuators/${greenhouseId}/${name}/command`, body);
   return res.data;
 }
 
-export async function getActuatorLogs(token: string, id: string, actuatorId: string) {
-  const res = await axios.get(`${API_BASE}/actuators/${id}/${actuatorId}/logs`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getActuatorLogs(_token: string, id: string, actuatorId: string) {
+  const res = await apiClient.get(`/actuators/${id}/${actuatorId}/logs`);
   return res.data;
 }
