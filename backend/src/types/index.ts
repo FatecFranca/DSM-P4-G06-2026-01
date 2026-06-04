@@ -56,6 +56,8 @@ export interface ConfigPayload {
 // ─── Socket.IO Events ──────────────────────────────────────────────────────────
 export interface ServerToClientEvents {
   'sensor:update': (data: SensorPayload & { greenhouseId: string; timestamp: string }) => void;
+  'telemetry:update': (data: SensorPayload & { greenhouseId: string; timestamp: string }) => void;
+  'greenhouse:update': (data: { greenhouseId: string; latestTelemetry: SensorPayload & { timestamp: string } }) => void;
   'actuator:update': (data: ActuatorStatusPayload & { greenhouseId: string }) => void;
   'greenhouse:offline': (data: { greenhouseId: string; since: string }) => void;
   'alert:critical': (data: { id: string; greenhouseId: string; type: string; message: string }) => void;
