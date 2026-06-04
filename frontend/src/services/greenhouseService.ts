@@ -1,41 +1,29 @@
 // src/services/greenhouseService.ts
 // Serviço central para chamadas à API de Estufas AgroTech
 
-import axios from 'axios';
+import apiClient from './apiClient';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
-
-export async function getGreenhouses(token: string) {
-  const res = await axios.get(`${API_BASE}/greenhouses`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getGreenhouses(_token: string) {
+  const res = await apiClient.get('/greenhouses');
   return res.data;
 }
 
-export async function getGreenhouseById(token: string, id: string) {
-  const res = await axios.get(`${API_BASE}/greenhouses/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getGreenhouseById(_token: string, id: string) {
+  const res = await apiClient.get(`/greenhouses/${id}`);
   return res.data;
 }
 
-export async function createGreenhouse(token: string, data: any) {
-  const res = await axios.post(`${API_BASE}/greenhouses`, data, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function createGreenhouse(_token: string, data: any) {
+  const res = await apiClient.post('/greenhouses', data);
   return res.data;
 }
 
-export async function updateGreenhouseConfig(token: string, id: string, config: any) {
-  const res = await axios.patch(`${API_BASE}/greenhouses/${id}/config`, config, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function updateGreenhouseConfig(_token: string, id: string, config: any) {
+  const res = await apiClient.patch(`/greenhouses/${id}/config`, config);
   return res.data;
 }
 
-export async function deleteGreenhouse(token: string, id: string) {
-  const res = await axios.delete(`${API_BASE}/greenhouses/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function deleteGreenhouse(_token: string, id: string) {
+  const res = await apiClient.delete(`/greenhouses/${id}`);
   return res.data;
 }

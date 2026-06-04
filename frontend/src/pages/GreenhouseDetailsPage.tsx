@@ -1,5 +1,5 @@
-import { useState, FormEvent } from 'react';
-import { Thermometer, Droplet, Sun } from 'lucide-react';
+import { useMemo, useState, FormEvent } from 'react';
+import { Thermometer, Droplet, Sun, Sprout, TrendingUp } from 'lucide-react';
 import { Greenhouse } from '../types';
 import { getStatusBgColor } from '../utils';
 
@@ -10,6 +10,57 @@ interface GreenhouseDetailsPageProps {
   onUpdateLimits: (ghId: string, limits: Partial<Greenhouse['limits']>) => void;
   onDeleteGreenhouse: (ghId: string) => void;
 }
+
+const mean = (values: number[]) =>
+  values.length ? values.reduce((total, value) => total + value, 0) / values.length : null;
+
+const median = (values: number[]) => {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+};
+
+const mode = (values: number[]) => {
+  if (!values.length) return null;
+  const counts = new Map<number, number>();
+  values.forEach((value) => {
+    const rounded = Number(value.toFixed(1));
+    counts.set(rounded, (counts.get(rounded) ?? 0) + 1);
+  });
+
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+};
+
+const standardDeviation = (values: number[]) => {
+  const average = mean(values);
+  if (average === null) return null;
+  const variance = values.reduce((total, value) => total + (value - average) ** 2, 0) / values.length;
+  return Math.sqrt(variance);
+};
+
+const forecastTemperature = (values: number[]) => {
+  if (!values.length) return null;
+  if (values.length === 1) return values[0];
+  const recent = values.slice(-6);
+  const delta = (recent[recent.length - 1] - recent[0]) / Math.max(recent.length - 1, 1);
+  return recent[recent.length - 1] + delta;
+};
+
+const sparklinePoints = (values: number[], width = 360, height = 180) => {
+  if (!values.length) return '';
+  const maxValue = Math.max(...values);
+  const minValue = Math.min(...values);
+  const range = Math.max(maxValue - minValue, 1);
+
+  return values
+    .map((value, index) => {
+      const x = values.length === 1 ? 0 : (index / (values.length - 1)) * width;
+      const y = height - 18 - ((value - minValue) / range) * (height - 36);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+};
 
 export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
   selectedGreenhouse,
@@ -39,26 +90,42 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
   const isSoilOut = selectedGreenhouse.sensors.umid_solo < selectedGreenhouse.limits.umidSoloMin || 
                     selectedGreenhouse.sensors.umid_solo > selectedGreenhouse.limits.umidSoloMax;
   const tempHistory = selectedGreenhouse.history.temp;
+  const soilTempHistory = selectedGreenhouse.history.temp_solo ?? [];
   const soilHistory = selectedGreenhouse.history.umid_solo;
   const hasTempHistory = tempHistory.length > 0;
   const maxTemp = hasTempHistory ? Math.max(...tempHistory) : 0;
   const minTemp = hasTempHistory ? Math.min(...tempHistory) : 0;
-  const tempRange = Math.max(maxTemp - minTemp, 1);
-  const tempChartPoints = hasTempHistory
-    ? tempHistory
-        .map((value, index) => {
-          const x = tempHistory.length === 1 ? 0 : (index / (tempHistory.length - 1)) * 360;
-          const y = 180 - ((value - minTemp) / tempRange) * 150;
-          return `${x.toFixed(1)},${y.toFixed(1)}`;
-        })
-        .join(' ')
-    : '';
-  const averageTemp = hasTempHistory
-    ? tempHistory.reduce((total, value) => total + value, 0) / tempHistory.length
-    : null;
+  const tempChartPoints = useMemo(() => sparklinePoints(tempHistory), [tempHistory]);
+  const averageTemp = useMemo(() => mean(tempHistory), [tempHistory]);
+  const medianTemp = useMemo(() => median(tempHistory), [tempHistory]);
+  const modeTemp = useMemo(() => mode(tempHistory), [tempHistory]);
+  const deviationTemp = useMemo(() => standardDeviation(tempHistory), [tempHistory]);
+  const forecastTemp = useMemo(() => forecastTemperature(tempHistory), [tempHistory]);
   const averageSoil = soilHistory.length
     ? soilHistory.reduce((total, value) => total + value, 0) / soilHistory.length
     : null;
+  const hasSoilTempHistory = soilTempHistory.length > 0;
+  const averageSoilTemp = hasSoilTempHistory
+    ? soilTempHistory.reduce((total, value) => total + value, 0) / soilTempHistory.length
+    : null;
+  const maxSoilTemp = hasSoilTempHistory ? Math.max(...soilTempHistory) : 0;
+  const sampleSize = Math.max(tempHistory.length, soilTempHistory.length, soilHistory.length);
+  const tempTextHistory = tempHistory.slice(-8).map((value, index, values) => {
+    const previous = values[index - 1] ?? value;
+    const trend = value > previous ? 'subiu' : value < previous ? 'caiu' : 'manteve';
+    return {
+      label: `Amostra ${Math.max(tempHistory.length - values.length + index + 1, 1)}`,
+      value,
+      trend
+    };
+  });
+  const statisticCards = [
+    { label: 'Media', value: averageTemp, color: 'text-emerald-300' },
+    { label: 'Moda', value: modeTemp, color: 'text-cyan-300' },
+    { label: 'Mediana', value: medianTemp, color: 'text-sky-300' },
+    { label: 'Desvio padrao', value: deviationTemp, color: 'text-amber-300' },
+    { label: 'Previsao', value: forecastTemp, color: 'text-violet-300' }
+  ];
 
   return (
     <div className="space-y-6">
@@ -141,7 +208,7 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <div className="p-5 rounded-2xl bg-zinc-950/40 border border-emerald-950/10 flex flex-col justify-between h-40">
                 <div>
                   <Thermometer size={20} className="text-orange-400 mb-2" />
@@ -153,6 +220,17 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
                 <span className="text-[9px] text-zinc-500 font-mono">
                   Min: {selectedGreenhouse.limits.tempMin}° | Max: {selectedGreenhouse.limits.tempMax}°
                 </span>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-zinc-950/40 border border-emerald-950/10 flex flex-col justify-between h-40">
+                <div>
+                  <Sprout size={20} className="text-lime-400 mb-2" />
+                  <span className="text-[10px] text-zinc-500 block uppercase font-bold">Temperatura Solo</span>
+                  <span className="text-2xl font-mono font-bold block mt-2 text-lime-400">
+                    {selectedGreenhouse.sensors.temp_solo.toFixed(1)}Â°C
+                  </span>
+                </div>
+                <span className="text-[9px] text-zinc-500 font-mono">Sensor temp_solo</span>
               </div>
 
               <div className="p-5 rounded-2xl bg-zinc-950/40 border border-emerald-950/10 flex flex-col justify-between h-40">
@@ -329,74 +407,150 @@ export const GreenhouseDetailsPage: React.FC<GreenhouseDetailsPageProps> = ({
       )}
 
       {activeTab === 'metrics' && (
-        <div className="bg-zinc-950/40 border border-zinc-800 rounded-2xl p-6 space-y-6">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-              Consumo e Registros Temporais (Histórico InfluxDB)
-            </h3>
-            <p className="text-xs text-zinc-400">Dados reais resgatados do banco de séries temporais.</p>
-          </div>
-
-          <div className="h-60 w-full bg-zinc-950 border border-zinc-900 rounded-2xl p-4 relative flex items-end">
-            <div className="absolute left-4 top-4 bottom-4 flex flex-col justify-between text-[10px] font-mono text-zinc-600 select-none border-r border-zinc-900/50 pr-2">
-              <span>{hasTempHistory ? `${maxTemp.toFixed(1)}°C` : '--'}</span>
-              <span>{hasTempHistory ? `${((maxTemp + minTemp) / 2).toFixed(1)}°C` : '--'}</span>
-              <span>{hasTempHistory ? `${minTemp.toFixed(1)}°C` : '--'}</span>
+        <div className="space-y-6">
+          <div className="bg-zinc-950/40 border border-zinc-800 rounded-lg p-5 space-y-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                  Registros Temporais InfluxDB
+                </h3>
+                <p className="text-xs text-zinc-400">Temperatura ambiente, estatisticas e tendencia da amostra.</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-emerald-300">
+                <TrendingUp size={16} />
+                <span className="font-mono">
+                  {forecastTemp === null ? 'Sem previsao' : `${forecastTemp.toFixed(1)} C proxima janela`}
+                </span>
+              </div>
             </div>
 
-            <div className="flex-1 h-full pl-12 relative">
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                <div className="border-b border-zinc-900/40 w-full" />
-                <div className="border-b border-zinc-900/40 w-full" />
-                <div className="border-b border-zinc-900/40 w-full" />
+            <div className="h-72 w-full bg-[#050807] border border-zinc-900 rounded-lg p-4 relative">
+              <div className="absolute left-4 top-4 bottom-8 flex flex-col justify-between text-[10px] font-mono text-zinc-500 select-none pr-3">
+                <span>{hasTempHistory ? `${maxTemp.toFixed(1)} C` : '--'}</span>
+                <span>{hasTempHistory ? `${((maxTemp + minTemp) / 2).toFixed(1)} C` : '--'}</span>
+                <span>{hasTempHistory ? `${minTemp.toFixed(1)} C` : '--'}</span>
               </div>
 
-              <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#4ade80" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#4ade80" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                {hasTempHistory && (
-                  <polyline
-                    points={tempChartPoints}
-                    fill="none"
-                    stroke="#22c55e"
-                    strokeWidth="2"
-                  />
-                )}
-              </svg>
+              <div className="absolute left-16 right-4 top-4 bottom-8">
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                  <div className="border-b border-zinc-800/70 w-full" />
+                  <div className="border-b border-zinc-900/80 w-full" />
+                  <div className="border-b border-zinc-900/80 w-full" />
+                  <div className="border-b border-zinc-800/70 w-full" />
+                </div>
 
-              <div className="absolute bottom-1 left-0 right-0 flex justify-between text-[9px] font-mono text-zinc-600 px-4">
+                <svg className="absolute inset-0 w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 360 180">
+                  <defs>
+                    <linearGradient id="tempLineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="55%" stopColor="#22c55e" />
+                      <stop offset="100%" stopColor="#f59e0b" />
+                    </linearGradient>
+                  </defs>
+                  {hasTempHistory && (
+                    <>
+                      <polyline points={`0,180 ${tempChartPoints} 360,180`} fill="#052e1a" opacity="0.26" />
+                      <polyline
+                        points={tempChartPoints}
+                        fill="none"
+                        stroke="url(#tempLineGradient)"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="3"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    </>
+                  )}
+                </svg>
+
+                {!hasTempHistory && (
+                  <div className="absolute inset-0 grid place-items-center text-xs text-zinc-500">
+                    Aguardando historico do InfluxDB
+                  </div>
+                )}
+              </div>
+
+              <div className="absolute bottom-2 left-16 right-4 flex justify-between text-[9px] font-mono text-zinc-600">
                 <span>{hasTempHistory ? 'Inicio da amostra' : 'Sem historico'}</span>
-                <span>{hasTempHistory ? 'Ultimas 12h' : 'Aguardando InfluxDB'}</span>
+                <span>{hasTempHistory ? 'Ultimas 12h' : 'InfluxDB'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {statisticCards.map((stat) => (
+              <div key={stat.label} className="p-4 bg-zinc-950 border border-zinc-900 rounded-lg">
+                <span className="text-[10px] text-zinc-500 uppercase block font-medium">{stat.label}</span>
+                <span className={`text-lg font-mono font-bold ${stat.color}`}>
+                  {stat.value === null ? '--' : `${stat.value.toFixed(1)} C`}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-zinc-950/40 border border-zinc-900 rounded-lg p-5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">Comparativo estatistico</h4>
+              <div className="space-y-3">
+                {statisticCards.slice(0, 4).map((stat) => {
+                  const width = stat.value === null || maxTemp === 0 ? 0 : Math.min((stat.value / Math.max(maxTemp, 1)) * 100, 100);
+                  return (
+                    <div key={stat.label} className="grid grid-cols-[96px_1fr_72px] items-center gap-3 text-xs">
+                      <span className="text-zinc-400">{stat.label}</span>
+                      <div className="h-2 rounded-full bg-zinc-900 overflow-hidden">
+                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${width}%` }} />
+                      </div>
+                      <span className="font-mono text-zinc-300 text-right">
+                        {stat.value === null ? '--' : stat.value.toFixed(1)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-zinc-950/40 border border-zinc-900 rounded-lg p-5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">Historico textual</h4>
+              <div className="space-y-3">
+                {tempTextHistory.length ? (
+                  tempTextHistory.map((item) => (
+                    <div key={item.label} className="flex items-center justify-between gap-3 border-b border-zinc-900 pb-2 last:border-0">
+                      <div>
+                        <span className="block text-xs text-zinc-300">{item.label}</span>
+                        <span className="text-[10px] text-zinc-500">Temperatura {item.trend}</span>
+                      </div>
+                      <span className="font-mono text-sm text-emerald-300">{item.value.toFixed(1)} C</span>
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-500">Sem leituras suficientes para listar.</span>
+                )}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-900">
-              <span className="text-[10px] text-zinc-500 uppercase block font-medium">Temp Média</span>
-              <span className="text-sm font-mono font-bold text-zinc-200">
-                {averageTemp === null ? '--' : `${averageTemp.toFixed(1)} °C`}
-              </span>
-            </div>
-            <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-900">
-              <span className="text-[10px] text-zinc-500 uppercase block font-medium">Temp Pico</span>
-              <span className="text-sm font-mono font-bold text-rose-500">
-                {hasTempHistory ? `${maxTemp.toFixed(1)} °C` : '--'}
-              </span>
-            </div>
-            <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-900">
-              <span className="text-[10px] text-zinc-500 uppercase block font-medium">Solo Média</span>
+            <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-900">
+              <span className="text-[10px] text-zinc-500 uppercase block font-medium">Solo media</span>
               <span className="text-sm font-mono font-bold text-emerald-400">
                 {averageSoil === null ? '--' : `${averageSoil.toFixed(1)} %`}
               </span>
             </div>
-            <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-900">
-              <span className="text-[10px] text-zinc-500 uppercase block font-medium">Tamanho Amostra</span>
-              <span className="text-sm font-mono font-bold text-zinc-400">{tempHistory.length}</span>
+            <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-900">
+              <span className="text-[10px] text-zinc-500 uppercase block font-medium">Temp solo media</span>
+              <span className="text-sm font-mono font-bold text-lime-400">
+                {averageSoilTemp === null ? '--' : `${averageSoilTemp.toFixed(1)} C`}
+              </span>
+            </div>
+            <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-900">
+              <span className="text-[10px] text-zinc-500 uppercase block font-medium">Temp solo pico</span>
+              <span className="text-sm font-mono font-bold text-orange-400">
+                {hasSoilTempHistory ? `${maxSoilTemp.toFixed(1)} C` : '--'}
+              </span>
+            </div>
+            <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-900">
+              <span className="text-[10px] text-zinc-500 uppercase block font-medium">Tamanho amostra</span>
+              <span className="text-sm font-mono font-bold text-zinc-400">{sampleSize}</span>
             </div>
           </div>
         </div>
