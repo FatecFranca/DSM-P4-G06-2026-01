@@ -124,11 +124,22 @@ async function handleSensorData(
   // Persist to InfluxDB (RN08)
   await sensorsSvc.writeTelemetry(greenhouseId, data);
 
-  // Broadcast to dashboard via Socket.IO
-  io.to(greenhouseId).emit('sensor:update', {
+  const timestamp = new Date().toISOString();
+  const telemetry = {
     ...data,
     greenhouseId,
-    timestamp: new Date().toISOString(),
+    timestamp,
+  };
+
+  // Broadcast to dashboard via Socket.IO
+  io.to(greenhouseId).emit('sensor:update', telemetry);
+  io.to(greenhouseId).emit('telemetry:update', telemetry);
+  io.to(greenhouseId).emit('greenhouse:update', {
+    greenhouseId,
+    latestTelemetry: {
+      ...data,
+      timestamp,
+    },
   });
 
   // RN10: Check critical thresholds

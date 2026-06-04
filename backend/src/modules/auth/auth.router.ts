@@ -46,6 +46,20 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
+// POST /auth/refresh
+router.post('/refresh', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const result = await svc.refresh(req.user!.id);
+    res.json(result);
+  } catch (err) {
+    if (err instanceof Error && err.message === 'User not found or inactive') {
+      res.status(401).json({ error: err.message });
+      return;
+    }
+    next(err);
+  }
+});
+
 // GET /auth/me
 router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response) => {
   res.json({ user: req.user });
