@@ -23,7 +23,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const activeFans = greenhouses.filter((gh) => gh.actuators.exaustor).length;
   const totalReadings = greenhouses.reduce(
     (total, gh) =>
-      total + Math.max(gh.history.temp.length, gh.history.umid_ar.length, gh.history.umid_solo.length),
+      total +
+      Math.max(
+        gh.history.temp.length,
+        (gh.history.temp_solo ?? []).length,
+        gh.history.umid_ar.length,
+        gh.history.umid_solo.length
+      ),
     0
   );
 
