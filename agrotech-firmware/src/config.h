@@ -45,9 +45,9 @@
 #define PIN_LED_STATUS   2    // LED azul interno do ESP32
 
 // ── Constantes de tempo (ms / s) ─────────────────────────────────
-#define INTERVALO_LEITURA_MS     6000UL   // RN07: leitura a cada 60s
-#define INTERVALO_ENVIO_MS      30000UL   // RN08: envio periódico a cada 5min
-#define INTERVALO_HEARTBEAT_MS   30000UL   // heartbeat a cada 30s
+#define INTERVALO_LEITURA_MS     30000UL   // RN07: leitura a cada 60s == 60000UL
+#define INTERVALO_ENVIO_MS      300000UL   // RN08: envio periódico a cada 5min == 300000UL
+#define INTERVALO_HEARTBEAT_MS   30000UL   // heartbeat a cada 30s == 30000UL
 #define TIMEOUT_RECONNECT_MS      5000UL   // tentativa de reconexão MQTT
 #define TIMEOUT_WIFI_MS          20000UL   // timeout de conexão Wi-Fi
 
