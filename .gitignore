@@ -1,0 +1,69 @@
+# ==================================================
+# ARQUIVOS SENSÍVEIS E VARIÁVEIS DE AMBIENTE
+# ==================================================
+
+# Segredos (Firmware)
+src/secrets.h
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.*.local
+.vite
+
+# ==================================================
+# ARQUIVOS E DIRETÓRIOS GLOBAIS
+# ==================================================
+
+# Dependências
+node_modules
+
+# Build / Distribuição
+dist
+dist-ssr
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Cobertura de testes
+coverage
+
+# Arquivos locais
+*.local
+
+# Sistema Operacional
+.DS_Store
+
+# IDEs e Editores
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==================================================
+# FIRMWARE (ESP32 / PlatformIO)
+# ==================================================
+
+.pio/
+
+# ==================================================
+# BACKEND
+# ==================================================
+
+prisma/migrations/
+
+# ==================================================
+# FRONTEND
+# ==================================================
+
+# Adicione regras específicas do frontend aqui, se necessário.
