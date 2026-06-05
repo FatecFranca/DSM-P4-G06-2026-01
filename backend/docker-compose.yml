@@ -1,0 +1,116 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agrotech-postgres
+    environment:
+      POSTGRES_DB: agrotech
+      POSTGRES_USER: agrotech
+      POSTGRES_PASSWORD: agrotech
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agrotech -d agrotech"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agrotech-network
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: agrotech-influxdb
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: agrotech123
+      DOCKER_INFLUXDB_INIT_ORG: agrotech
+      DOCKER_INFLUXDB_INIT_BUCKET: agrotech_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: my-super-secret-token
+    ports:
+      - '8086:8086'
+    volumes:
+      - influxdata:/var/lib/influxdb2
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8086/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agrotech-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: agrotech-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agrotech-network
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: agrotech-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto:/mosquitto/config
+      - mosquittodata:/mosquitto/data
+      - mosquittologs:/mosquitto/log
+    restart: unless-stopped
+    networks:
+      - agrotech-network
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agrotech-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - agrotech-network
+    command: sh -c "npx prisma db push && node dist/server.js"
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+   
+
+volumes:
+  pgdata:
+  influxdata:
+  redisdata:
+  mosquittodata:
+  mosquittologs:
+
+networks:
+  agrotech-network:
+    driver: bridge
