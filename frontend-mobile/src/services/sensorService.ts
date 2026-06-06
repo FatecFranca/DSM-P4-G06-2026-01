@@ -1,19 +1,15 @@
-// Serviço para chamadas à API de Sensores AgroTech (mobile)
-import axios from 'axios';
-
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-
-export async function getLatestSensorReading(token: string, greenhouseId: string) {
-  const res = await axios.get(`${API_BASE}/sensors/${greenhouseId}/latest`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+import apiClient from './apiClient';
+ 
+export async function getLatestSensorReading(greenhouseId: string) {
+  const res = await apiClient.get(`/sensors/${greenhouseId}/latest`);
   return res.data;
 }
-
-export async function getSensorHistory(token: string, greenhouseId: string, params?: { start?: string; end?: string; window?: string }) {
-  const res = await axios.get(`${API_BASE}/sensors/${greenhouseId}/history`, {
-    headers: { Authorization: `Bearer ${token}` },
-    params,
-  });
+ 
+export async function getSensorHistory(
+  greenhouseId: string,
+  params?: { start?: string; end?: string; window?: string }
+) {
+  const res = await apiClient.get(`/sensors/${greenhouseId}/history`, { params });
   return res.data;
 }
+ 

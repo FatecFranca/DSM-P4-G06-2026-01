@@ -1,13 +1,7 @@
-// src/services/logService.ts
-// Mock para logs locais no mobile
-import { LogEntry } from '../types';
-import axios from 'axios';
+import apiClient from './apiClient';
+import { LogEntry } from '../types/log';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-
-export async function getLogs(token: string): Promise<LogEntry[]> {
-  const res = await axios.get(`${API_BASE}/logs`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getLogs(): Promise<LogEntry[]> {
+  const res = await apiClient.get('/logs');
   return res.data;
 }
