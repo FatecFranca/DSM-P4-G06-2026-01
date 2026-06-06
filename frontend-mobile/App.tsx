@@ -17,12 +17,9 @@ import { useAlerts } from './src/hooks/useAlerts';
 import { useLogs } from './src/hooks/useLogs';
 
 import { colors } from './src/utils/colors';
-
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-
 import { Greenhouse } from './src/types/greenhouse';
 import { User } from './src/types/user';
-
 import * as userService from './src/services/userService';
 
 // ─── Login Screen ─────────────────────────────────────────────────────────────
@@ -34,20 +31,13 @@ function LoginScreen() {
   const [error, setError]       = useState<string | null>(null);
 
   const handleLogin = async () => {
-  try {
-    console.log('BOTÃO LOGIN');
-
-    await login(email, password);
-
-    console.log('LOGIN SUCESSO');
-  } catch (err: any) {
-    console.log('LOGIN ERRO', err?.response?.data);
-    console.log('STATUS', err?.response?.status);
-    console.log('ERROR', err);
-
-    setError('Falha no login');
-  }
-};
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      console.error('LOGIN ERRO', err?.response?.data);
+      setError('Falha no login');
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.dark }}>
@@ -86,23 +76,35 @@ function LoginScreen() {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 function AppWithAuth() {
-  const [currentPage, setCurrentPage]       = useState('dashboard');
-  const [isInsideDetails, setIsInsideDetails] = useState(false);
-  const [showConsole, setShowConsole]       = useState(false);
+  const [currentPage, setCurrentPage]             = useState('dashboard');
+  const [isInsideDetails, setIsInsideDetails]     = useState(false);
+  const [showConsole, setShowConsole]             = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(true);
-  const [showAddModal, setShowAddModal]     = useState(false);
-  const [users, setUsers]                   = useState<User[]>([]);
+  const [showAddModal, setShowAddModal]           = useState(false);
+  const [users, setUsers]                         = useState<User[]>([]);
 
   const { token, user, loading: authLoading } = useAuth();
 
   const {
-    greenhouses, setGreenhouses,
-    selectedGreenhouse, setSelectedGreenhouse,
-    addGreenhouse, toggleActuator, updateGreenhouseLimits,
-  } = useGreenhouses(token || '');
+    greenhouses,
+    selectedGreenhouse,
+    setSelectedGreenhouse,
+    loading: greenhousesLoading,
+    error: greenhousesError,
+    addGreenhouse,
+    toggleActuator,
+    updateGreenhouseLimits,
+    deleteGreenhouse,
+  } = useGreenhouses(token);
 
-  const { alerts, resolveAlert, activeAlertsCount } = useAlerts(token || '');
-  const { logs } = useLogs(token || '');
+  const {
+    alerts,
+    resolveAlert,
+    activeAlertsCount,
+    loading: alertsLoading,
+    error: alertsError,
+  } = useAlerts(token);
+  const { logs } = useLogs(token);
 
   useEffect(() => {
     if (!token) return;
@@ -126,13 +128,17 @@ function AppWithAuth() {
 
   const handleUpdateLimits = async (limits: Greenhouse['limits']) => {
     if (!selectedGreenhouse) return;
-    await updateGreenhouseLimits(selectedGreenhouse.id, limits);
+    return updateGreenhouseLimits(selectedGreenhouse.id, limits);
   };
 
-  const handleDeleteGreenhouse = (id: string) => {
-    setIsInsideDetails(false);
-    setSelectedGreenhouse(null);
-    setGreenhouses(prev => prev.filter(gh => gh.id !== id));
+  const handleDeleteGreenhouse = async (id: string) => {
+    try {
+      await deleteGreenhouse(id);
+    } catch (err) {
+      console.error('Erro ao excluir estufa', err);
+    } finally {
+      setIsInsideDetails(false);
+    }
   };
 
   if (authLoading) return null;
@@ -156,7 +162,12 @@ function AppWithAuth() {
         {currentPage === 'dashboard' && !isInsideDetails && (
           <DashboardScreen
             greenhouses={greenhouses}
-            onGreenhouseSelect={gh => { setSelectedGreenhouse(gh); setIsInsideDetails(true); }}
+            loading={greenhousesLoading}
+            error={greenhousesError}
+            onGreenhouseSelect={gh => {
+              setSelectedGreenhouse(gh);
+              setIsInsideDetails(true);
+            }}
             onAddGreenhouse={() => setShowAddModal(true)}
           />
         )}
@@ -171,16 +182,22 @@ function AppWithAuth() {
           />
         )}
 
-        {currentPage === 'alerts' && (
+        {currentPage === 'alerts' && !isInsideDetails && (
           <AlertsScreen
             alerts={alerts}
             activeAlertsCount={activeAlertsCount}
+            loading={alertsLoading}
+            error={alertsError}
             onResolveAlert={resolveAlert}
           />
         )}
 
-        {currentPage === 'settings' && (
-          <SettingsScreen users={users} greenhouses={greenhouses} alerts={alerts} />
+        {currentPage === 'settings' && !isInsideDetails && (
+          <SettingsScreen
+            users={users}
+            greenhouses={greenhouses}
+            alerts={alerts}
+          />
         )}
       </View>
 

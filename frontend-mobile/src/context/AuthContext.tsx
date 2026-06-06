@@ -8,7 +8,7 @@
     token: string | null;
     user: User | null;
     login: (email: string, password: string) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
     loading: boolean;
   }
 
