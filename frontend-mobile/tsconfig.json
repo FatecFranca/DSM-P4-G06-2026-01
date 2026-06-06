@@ -13,8 +13,6 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
     "composite": true,
     "removeComments": false,
     "noEmit": true,
@@ -25,15 +23,19 @@
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
     "noImplicitAny": true,
-    "jsx": "react-native",
     "types": [
-      "react-native",
-      "jest",
-      "@testing-library/jest-native"
+      "node",
+      "react-native"
     ]
   },
   "include": [
-    "src"
+    "**/*.ts",
+    "**/*.tsx",
+    "*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
   ],
   "references": [
     {
