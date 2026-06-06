@@ -93,36 +93,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: colors.darkSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(16, 185, 129, 0.15)',
   },
+
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginRight: 12,
   },
+
   userAvatar: {
     fontSize: 18,
     marginRight: 6,
   },
+
   userName: {
     fontSize: 10,
     fontWeight: '700',
     color: 'white',
   },
+
   userRole: {
     fontSize: 8,
     color: colors.zinc[500],
     fontWeight: '600',
   },
-    backgroundColor: colors.darkSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(16, 185, 129, 0.15)',
-  },
+
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
+
   logo: {
     padding: 8,
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -132,6 +137,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   logoSubtitle: {
     fontSize: 8,
     fontWeight: '900',
@@ -140,16 +146,19 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     marginBottom: 2,
   },
+
   logoTitle: {
     fontSize: 12,
     fontWeight: '900',
     color: 'white',
     letterSpacing: 0.3,
   },
+
   headerActions: {
     flexDirection: 'row',
     gap: 8,
   },
+
   headerButton: {
     padding: 8,
     borderRadius: 10,
@@ -160,6 +169,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: colors.zinc[900],
   },
+
   headerButtonText: {
     fontSize: 10,
     fontWeight: '700',
