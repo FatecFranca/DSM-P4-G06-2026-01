@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from '../types';
+import { Alert } from '../types/alert';
 import * as alertService from '../services/alertService';
 
 export const useAlerts = (token: string) => {
@@ -11,7 +11,7 @@ export const useAlerts = (token: string) => {
     let mounted = true;
     setLoading(true);
     alertService
-      .getAlerts(token)
+      .getAlerts()
       .then(data => {
         if (mounted) {
           setAlerts(data);
@@ -24,44 +24,29 @@ export const useAlerts = (token: string) => {
       .finally(() => {
         if (mounted) setLoading(false);
       });
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [token]);
 
-  const resolveAlert = useCallback(
-    async (alertId: string) => {
-      try {
-        const updated = await alertService.resolveAlert(token, alertId);
-        setAlerts(prev =>
-          prev.map(alert => (alert.id === alertId ? { ...alert, ...updated } : alert))
-        );
-      } catch {
-        setError('Erro ao resolver alerta');
-      }
-    },
-    [token]
-  );
+  const resolveAlert = useCallback(async (alertId: string) => {
+    try {
+      const updated = await alertService.resolveAlert(alertId);
+      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, ...updated } : a));
+    } catch {
+      setError('Erro ao resolver alerta');
+    }
+  }, []);
 
-  const activeAlertsCount = alerts.filter((a) => !a.resolved).length;
-
-  // Add alert (backend)
   const addAlert = async (alertData: any) => {
     try {
-      const newAlert = await alertService.createAlert(token, alertData);
-      setAlerts((prev) => [...prev, newAlert]);
+      const newAlert = await alertService.createAlert(alertData);
+      setAlerts(prev => [...prev, newAlert]);
       return newAlert;
     } catch {
       setError('Erro ao criar alerta');
     }
   };
 
-  return {
-    alerts,
-    resolveAlert,
-    activeAlertsCount,
-    loading,
-    error,
-    addAlert,
-  };
+  const activeAlertsCount = alerts.filter(a => !a.resolved).length;
+
+  return { alerts, resolveAlert, activeAlertsCount, loading, error, addAlert };
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Greenhouse } from '../types';
+import { Greenhouse } from '../types/greenhouse';
 import * as greenhouseService from '../services/greenhouseService';
 
 export const useGreenhouses = (token: string) => {
@@ -12,7 +12,7 @@ export const useGreenhouses = (token: string) => {
     let mounted = true;
     setLoading(true);
     greenhouseService
-      .getGreenhouses(token)
+      .getGreenhouses()
       .then(data => {
         if (mounted) {
           setGreenhouses(data);
@@ -26,35 +26,27 @@ export const useGreenhouses = (token: string) => {
       .finally(() => {
         if (mounted) setLoading(false);
       });
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [token]);
 
-  // Add greenhouse (backend)
   const addGreenhouse = async (name: string, sector: string) => {
-    if (!token) return;
-    const newGh = await greenhouseService.createGreenhouse(token, { name, sector });
-    setGreenhouses((prev) => [...prev, newGh]);
+    const newGh = await greenhouseService.createGreenhouse({ name, sector });
+    setGreenhouses(prev => [...prev, newGh]);
     setSelectedGreenhouse(newGh);
     return newGh;
   };
 
-  // Toggle actuator (backend)
   const toggleActuator = async (id: string, actuatorKey: keyof Greenhouse['actuators']) => {
-    if (!token) return;
-    const updated = await greenhouseService.toggleActuator(token, id, actuatorKey);
-    setGreenhouses((prev) => prev.map((gh) => (gh.id === id ? updated : gh)));
-    setSelectedGreenhouse((prev) => (prev && prev.id === id ? updated : prev));
+    const updated = await greenhouseService.toggleActuator(id, actuatorKey);
+    setGreenhouses(prev => prev.map(gh => gh.id === id ? updated : gh));
+    setSelectedGreenhouse(prev => prev?.id === id ? updated : prev);
     return updated;
   };
 
-  // Update limits (backend)
   const updateGreenhouseLimits = async (id: string, limits: Greenhouse['limits']) => {
-    if (!token) return;
-    const updated = await greenhouseService.updateLimits(token, id, limits);
-    setGreenhouses((prev) => prev.map((gh) => (gh.id === id ? updated : gh)));
-    setSelectedGreenhouse((prev) => (prev && prev.id === id ? updated : prev));
+    const updated = await greenhouseService.updateLimits(id, limits);
+    setGreenhouses(prev => prev.map(gh => gh.id === id ? updated : gh));
+    setSelectedGreenhouse(prev => prev?.id === id ? updated : prev);
     return updated;
   };
 

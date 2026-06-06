@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogEntry } from '../types';
+import { LogEntry } from '../types/log';
 import * as logService from '../services/logService';
 
 export const useLogs = (token: string) => {
@@ -11,10 +11,9 @@ export const useLogs = (token: string) => {
     let mounted = true;
     setLoading(true);
     logService
-      .getLogs(token)
+      .getLogs()
       .then(data => {
         if (mounted) {
-          // Map backend log fields to LogEntry if needed
           const mapped = data.map((entry: any) => ({
             id: entry.id,
             time: entry.time || entry.timestamp,
@@ -32,14 +31,8 @@ export const useLogs = (token: string) => {
       .finally(() => {
         if (mounted) setLoading(false);
       });
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [token]);
 
-  return {
-    logs,
-    loading,
-    error,
-  };
+  return { logs, loading, error };
 };
