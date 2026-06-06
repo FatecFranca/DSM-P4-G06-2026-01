@@ -56,6 +56,7 @@ DerivedData
 *.ipa
 *.xcuserstate
 project.xcworkspace/
+tsconfig.tsbuildinfo
 
 # Android/IntelliJ
 android
