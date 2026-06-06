@@ -19,6 +19,8 @@ dist
 .env
 .env.local
 .env.*.local
+*.tsbuildinfo
+*.bak
 .idea
 .vscode
 *.swp
