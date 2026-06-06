@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Plus, Thermometer, Droplet } from 'lucide-react-native';
 import { GreenhouseCard } from '../components';
 import { Greenhouse } from '../types';
@@ -7,30 +7,45 @@ import { colors } from '../utils/colors';
 
 interface DashboardScreenProps {
   greenhouses: Greenhouse[];
+  loading?: boolean;
+  error?: string | null;
   onGreenhouseSelect: (greenhouse: Greenhouse) => void;
   onAddGreenhouse: () => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   greenhouses,
+  loading = false,
+  error = null,
   onGreenhouseSelect,
   onAddGreenhouse,
-      }) => {
-        const avgTemp =
-        (
-          greenhouses.reduce(
-            (sum, gh) => sum + (gh.sensors?.temp ?? 0),
-            0
-          ) / Math.max(greenhouses.length, 1)
-        ).toFixed(1);
+}) => {
+  const avgTemp = (
+    greenhouses.reduce((sum, gh) => sum + (gh.sensors?.temp ?? 0), 0) /
+    Math.max(greenhouses.length, 1)
+  ).toFixed(1);
 
-      const avgSoil =
-        (
-          greenhouses.reduce(
-            (sum, gh) => sum + (gh.sensors?.umid_solo ?? 0),
-            0
-          ) / Math.max(greenhouses.length, 1)
-        ).toFixed(1);
+  const avgSoil = (
+    greenhouses.reduce((sum, gh) => sum + (gh.sensors?.umid_solo ?? 0), 0) /
+    Math.max(greenhouses.length, 1)
+  ).toFixed(1);
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.emerald} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
       {/* Greeting Card */}
@@ -40,7 +55,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           Todos os {greenhouses.length} estufas operando no modo ciclo contínuo. Nenhuma anomalia detectada.
         </Text>
 
-        {/* Micro metrics grid */}
         <View style={styles.metricsGrid}>
           <View style={styles.metricCard}>
             <Thermometer size={16} color={colors.emerald} />
@@ -60,16 +74,21 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <Text style={styles.sectionTitle}>Estufas Online</Text>
         <Text style={styles.sectionSubtitle}>Toque para configurar</Text>
 
-        {greenhouses.map((gh) => (
-          <GreenhouseCard
-            key={gh.id}
-            greenhouse={gh}
-            onPress={onGreenhouseSelect}
-          />
-        ))}
+        {greenhouses.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>Nenhuma estufa cadastrada.</Text>
+          </View>
+        ) : (
+          greenhouses.map((gh) => (
+            <GreenhouseCard
+              key={gh.id}
+              greenhouse={gh}
+              onPress={onGreenhouseSelect}
+            />
+          ))
+        )}
       </View>
 
-      {/* Add Greenhouse Button */}
       <TouchableOpacity
         style={styles.addButton}
         onPress={onAddGreenhouse}
@@ -83,86 +102,20 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-  },
-  card: {
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-    backgroundColor: colors.darkTertiary,
-    marginBottom: 24,
-  },
-  greeting: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: 'white',
-  },
-  subGreeting: {
-    fontSize: 12,
-    color: colors.zinc[400],
-    lineHeight: 18,
-    marginTop: 8,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  metricCard: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    borderWidth: 1,
-    borderColor: colors.zinc[900],
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  metricLabel: {
-    fontSize: 8,
-    color: colors.zinc[500],
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  metricValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'white',
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: colors.zinc[400],
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 9,
-    color: colors.zinc[500],
-    marginBottom: 12,
-  },
-  addButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: colors.zinc[950],
-    borderWidth: 1,
-    borderColor: colors.zinc[900],
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
-  },
-  addButtonText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.emerald,
-    letterSpacing: 0.3,
-  },
+  scrollContent:   { paddingHorizontal: 16, paddingVertical: 20 },
+  centered:        { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText:       { color: colors.zinc[400], fontSize: 12 },
+  card:            { borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)', backgroundColor: colors.darkTertiary, marginBottom: 24 },
+  greeting:        { fontSize: 14, fontWeight: '900', color: 'white' },
+  subGreeting:     { fontSize: 12, color: colors.zinc[400], lineHeight: 18, marginTop: 8 },
+  metricsGrid:     { flexDirection: 'row', gap: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(16, 185, 129, 0.2)' },
+  metricCard:      { flex: 1, padding: 10, backgroundColor: 'rgba(0, 0, 0, 0.4)', borderWidth: 1, borderColor: colors.zinc[900], borderRadius: 12, alignItems: 'center' },
+  metricLabel:     { fontSize: 8, color: colors.zinc[500], fontWeight: '600', marginTop: 4 },
+  metricValue:     { fontSize: 12, fontWeight: '700', color: 'white', marginTop: 2 },
+  sectionTitle:    { fontSize: 11, fontWeight: '900', color: colors.zinc[400], letterSpacing: 0.5, marginBottom: 4 },
+  sectionSubtitle: { fontSize: 9, color: colors.zinc[500], marginBottom: 12 },
+  emptyState:      { paddingVertical: 24, alignItems: 'center' },
+  emptyStateText:  { fontSize: 11, color: colors.zinc[500], fontWeight: '600' },
+  addButton:       { paddingVertical: 14, paddingHorizontal: 16, backgroundColor: colors.zinc[950], borderWidth: 1, borderColor: colors.zinc[900], borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 20 },
+  addButtonText:   { fontSize: 11, fontWeight: '700', color: colors.emerald, letterSpacing: 0.3 },
 });
