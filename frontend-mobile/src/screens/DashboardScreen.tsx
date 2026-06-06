@@ -15,12 +15,22 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   greenhouses,
   onGreenhouseSelect,
   onAddGreenhouse,
-}) => {
-  const avgTemp =
-    (greenhouses.reduce((sum, gh) => sum + gh.sensors.temp, 0) / greenhouses.length).toFixed(1);
-  const avgSoil =
-    (greenhouses.reduce((sum, gh) => sum + gh.sensors.umid_solo, 0) / greenhouses.length).toFixed(1);
+      }) => {
+        const avgTemp =
+        (
+          greenhouses.reduce(
+            (sum, gh) => sum + (gh.sensors?.temp ?? 0),
+            0
+          ) / Math.max(greenhouses.length, 1)
+        ).toFixed(1);
 
+      const avgSoil =
+        (
+          greenhouses.reduce(
+            (sum, gh) => sum + (gh.sensors?.umid_solo ?? 0),
+            0
+          ) / Math.max(greenhouses.length, 1)
+        ).toFixed(1);
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
       {/* Greeting Card */}
