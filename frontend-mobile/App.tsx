@@ -34,12 +34,20 @@ function LoginScreen() {
   const [error, setError]       = useState<string | null>(null);
 
   const handleLogin = async () => {
-    try {
-      await login(email, password);
-    } catch {
-      setError('Falha no login');
-    }
-  };
+  try {
+    console.log('BOTÃO LOGIN');
+
+    await login(email, password);
+
+    console.log('LOGIN SUCESSO');
+  } catch (err: any) {
+    console.log('LOGIN ERRO', err?.response?.data);
+    console.log('STATUS', err?.response?.status);
+    console.log('ERROR', err);
+
+    setError('Falha no login');
+  }
+};
 
   return (
     <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.dark }}>
