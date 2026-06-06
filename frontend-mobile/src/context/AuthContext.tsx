@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import * as authService from '../services/authService';
-import { User } from '../types';
+import { clearSession, getStoredToken, getStoredUser } from '../services/apiClient';
+import { User } from '../types/user';
 
 interface AuthContextType {
   token: string | null;
@@ -18,32 +20,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Try to load token/user from localStorage (AsyncStorage for real app)
-    const storedToken = null; // TODO: Replace with AsyncStorage if needed
-    if (storedToken) {
-      setToken(storedToken);
-      authService.getCurrentUser(storedToken)
-        .then(setUser)
-        .catch(() => setUser(null))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    (async () => {
+      try {
+        const storedToken = await getStoredToken();
+        if (storedToken) {
+          setToken(storedToken);
+          const storedUser = await getStoredUser();
+          if (storedUser) {
+            setUser(storedUser);
+          } else {
+            const me = await authService.getCurrentUser();
+            setUser(me);
+          }
+        }
+      } catch {
+        await clearSession();
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('auth:expired', () => {
+      setToken(null);
+      setUser(null);
+    });
+    return () => sub.remove();
   }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
-    const { token: newToken, user: newUser } = await authService.login(email, password);
-    setToken(newToken);
-    setUser(newUser);
-    setLoading(false);
-    // TODO: Persist token in AsyncStorage
+    try {
+      const { token: newToken, user: newUser } = await authService.login(email, password);
+      setToken(newToken);
+      setUser(newUser);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await clearSession();
     setToken(null);
     setUser(null);
-    // TODO: Remove token from AsyncStorage
   };
 
   return (
