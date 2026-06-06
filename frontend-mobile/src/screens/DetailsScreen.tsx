@@ -35,13 +35,17 @@ export const DetailsScreen: React.FC<DetailsScreenProps> = ({
       if (!token) return;
       setDeleting(true);
       try {
-        await greenhouseService.deleteGreenhouse(token, greenhouse.id);
-        if (onDelete) onDelete(greenhouse.id);
-      } catch (e) {
-        // Optionally show error
+       await greenhouseService.deleteGreenhouse(greenhouse.id);
+
+        if (onDelete) {
+          onDelete(greenhouse.id);
+        }
+      } catch (error) {
+        console.error(error);
       } finally {
-        setDeleting(false);
+          setDeleting(false);
       }
+    
     };
   const [activeTab, setActiveTab] = useState<'overview' | 'limits' | 'metrics'>('overview');
   const [tempMin, setTempMin] = useState(String(greenhouse.limits.tempMin));
