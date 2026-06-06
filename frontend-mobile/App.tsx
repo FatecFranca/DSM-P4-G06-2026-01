@@ -84,7 +84,7 @@ function AppWithAuth() {
   const [users, setUsers]                         = useState<User[]>([]);
   const [refreshingSensors, setRefreshingSensors] = useState(false);
 
-  const { token, user, loading: authLoading } = useAuth();
+  const { token, user, logout, loading: authLoading } = useAuth();
 
   const {
     greenhouses,
@@ -212,6 +212,7 @@ function AppWithAuth() {
             users={users}
             greenhouses={greenhouses}
             alerts={alerts}
+            onLogout={logout}
           />
         )}
       </View>

@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, ScrollView, Text, StyleSheet } from 'react-native';
-import { Database, Info } from 'lucide-react-native';
+import { View, ScrollView, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Database, Info, LogOut } from 'lucide-react-native';
 import { Alert, Greenhouse, User } from '../types';
 import { colors } from '../utils/colors';
 
@@ -8,12 +8,14 @@ interface SettingsScreenProps {
   users: User[];
   greenhouses: Greenhouse[];
   alerts: Alert[];
+  onLogout: () => void | Promise<void>;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   users,
   greenhouses,
   alerts,
+  onLogout,
 }) => {
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -81,6 +83,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           Monitores tem permissao estrita de leitura rapida.
         </Text>
       </View>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={onLogout} activeOpacity={0.85}>
+        <LogOut size={16} color={colors.rose[400]} />
+        <Text style={styles.logoutButtonText}>Sair da conta</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -107,4 +114,6 @@ const styles = StyleSheet.create({
   securityNote:     { paddingHorizontal: 12, paddingVertical: 12, backgroundColor: 'rgba(16, 185, 129, 0.05)', borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.2)', borderRadius: 10, gap: 8 },
   securityNoteTitle:{ fontSize: 10, fontWeight: '700', color: 'white' },
   securityNoteText: { fontSize: 9, color: colors.zinc[300], lineHeight: 13 },
+  logoutButton:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 18, paddingVertical: 12, borderRadius: 10, backgroundColor: 'rgba(244, 63, 94, 0.08)', borderWidth: 1, borderColor: 'rgba(244, 63, 94, 0.25)' },
+  logoutButtonText: { fontSize: 10, fontWeight: '800', color: colors.rose[400] },
 });
