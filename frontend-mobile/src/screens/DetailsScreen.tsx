@@ -9,8 +9,18 @@ import {
   View,
 } from 'react-native';
 import { ArrowLeft, Check, Droplet, Sun, Thermometer, Wind } from 'lucide-react-native';
+import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { Greenhouse } from '../types';
 import { colors } from '../utils/colors';
+
+type MetricKey = keyof Greenhouse['history'];
+
+interface MetricOption {
+  key: MetricKey;
+  label: string;
+  unit: string;
+  range?: [number, number];
+}
 
 interface DetailsScreenProps {
   greenhouse: Greenhouse;
@@ -19,6 +29,134 @@ interface DetailsScreenProps {
   onUpdateLimits: (limits: Greenhouse['limits']) => Promise<Greenhouse | void>;
   onDelete: (id: string) => Promise<void>;
 }
+
+const round = (value: number, digits = 2) => Number.isFinite(value) ? value.toFixed(digits) : '-';
+
+const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+
+const mean = (values: number[]) => {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+};
+
+const median = (values: number[]) => {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+const mode = (values: number[]) => {
+  if (!values.length) return 0;
+  const frequencies = new Map<string, { value: number; count: number }>();
+
+  values.forEach(value => {
+    const key = value.toFixed(2);
+    const current = frequencies.get(key);
+    frequencies.set(key, { value, count: (current?.count ?? 0) + 1 });
+  });
+
+  return [...frequencies.values()].sort((a, b) => b.count - a.count)[0].value;
+};
+
+const standardDeviation = (values: number[]) => {
+  if (values.length < 2) return 0;
+  const avg = mean(values);
+  const variance = values.reduce((sum, value) => sum + ((value - avg) ** 2), 0) / (values.length - 1);
+  return Math.sqrt(variance);
+};
+
+const skewness = (values: number[]) => {
+  if (values.length < 3) return 0;
+  const avg = mean(values);
+  const std = standardDeviation(values);
+  if (!std) return 0;
+  return values.reduce((sum, value) => sum + (((value - avg) / std) ** 3), 0) / values.length;
+};
+
+const kurtosis = (values: number[]) => {
+  if (values.length < 4) return 0;
+  const avg = mean(values);
+  const std = standardDeviation(values);
+  if (!std) return 0;
+  return values.reduce((sum, value) => sum + (((value - avg) / std) ** 4), 0) / values.length - 3;
+};
+
+const regression = (values: number[]) => {
+  if (values.length < 2) return { slope: 0, intercept: values[0] ?? 0, r2: 0 };
+
+  const xs = values.map((_, index) => index + 1);
+  const avgX = mean(xs);
+  const avgY = mean(values);
+  const numerator = xs.reduce((sum, x, index) => sum + ((x - avgX) * (values[index] - avgY)), 0);
+  const denominator = xs.reduce((sum, x) => sum + ((x - avgX) ** 2), 0);
+  const slope = denominator ? numerator / denominator : 0;
+  const intercept = avgY - slope * avgX;
+  const total = values.reduce((sum, value) => sum + ((value - avgY) ** 2), 0);
+  const residual = values.reduce((sum, value, index) => {
+    const predicted = intercept + slope * xs[index];
+    return sum + ((value - predicted) ** 2);
+  }, 0);
+
+  return { slope, intercept, r2: total ? 1 - (residual / total) : 0 };
+};
+
+const erf = (value: number) => {
+  const sign = value >= 0 ? 1 : -1;
+  const x = Math.abs(value);
+  const a1 = 0.254829592;
+  const a2 = -0.284496736;
+  const a3 = 1.421413741;
+  const a4 = -1.453152027;
+  const a5 = 1.061405429;
+  const p = 0.3275911;
+  const t = 1 / (1 + p * x);
+  const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return sign * y;
+};
+
+const normalCdf = (value: number, avg: number, std: number) => {
+  if (!std) return value >= avg ? 1 : 0;
+  return 0.5 * (1 + erf((value - avg) / (std * Math.sqrt(2))));
+};
+
+const probabilityWithinRange = (values: number[], range?: [number, number]) => {
+  if (!range || values.length < 2) return null;
+  const avg = mean(values);
+  const std = standardDeviation(values);
+  if (!std) return values.every(value => value >= range[0] && value <= range[1]) ? 1 : 0;
+  return Math.max(0, Math.min(1, normalCdf(range[1], avg, std) - normalCdf(range[0], avg, std)));
+};
+
+const confidenceInterval = (values: number[]) => {
+  if (values.length < 2) return [mean(values), mean(values)] as const;
+  const avg = mean(values);
+  const margin = 1.96 * (standardDeviation(values) / Math.sqrt(values.length));
+  return [avg - margin, avg + margin] as const;
+};
+
+const chartPoints = (values: number[], width: number, height: number) => {
+  if (!values.length) return '';
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  return values.map((value, index) => {
+    const x = values.length === 1 ? width / 2 : (index / (values.length - 1)) * width;
+    const y = height - ((value - min) / range) * height;
+    return `${x},${y}`;
+  }).join(' ');
+};
+
+const normalizeInSample = (value: number, values: number[]) => {
+  if (!values.length) return 0;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  return clamp((value - min) / range);
+};
+
+const percentStyle = (value: number) => `${Math.round(clamp(value) * 100)}%` as const;
 
 export const DetailsScreen: React.FC<DetailsScreenProps> = ({
   greenhouse: initialGreenhouse,
@@ -38,6 +176,7 @@ export const DetailsScreen: React.FC<DetailsScreenProps> = ({
   const [umidMax, setUmidMax] = useState(String(greenhouse.limits.umidSoloMax));
   const [luzMin, setLuzMin] = useState(String(greenhouse.limits.luzMin));
   const [luzMax, setLuzMax] = useState(String(greenhouse.limits.luzMax));
+  const [selectedMetric, setSelectedMetric] = useState<MetricKey>('temp');
 
   useEffect(() => {
     setGreenhouse(initialGreenhouse);
@@ -103,6 +242,42 @@ export const DetailsScreen: React.FC<DetailsScreenProps> = ({
   const sensors = greenhouse.sensors ?? { temp: 0, temp_solo: 0, umid_ar: 0, umid_solo: 0, luz: 0 };
   const limits = greenhouse.limits ?? { tempMin: 0, tempMax: 0, umidSoloMin: 0, umidSoloMax: 0, luzMin: 0, luzMax: 0 };
   const history = greenhouse.history ?? { temp: [], temp_solo: [], umid_ar: [], umid_solo: [], luz: [] };
+  const metricOptions: MetricOption[] = [
+    { key: 'temp', label: 'Temperatura', unit: 'C', range: [limits.tempMin, limits.tempMax] },
+    { key: 'temp_solo', label: 'Temp. Solo', unit: 'C' },
+    { key: 'umid_ar', label: 'Umid. Ar', unit: '%', range: [30, 80] },
+    { key: 'umid_solo', label: 'Umid. Solo', unit: '%', range: [limits.umidSoloMin, limits.umidSoloMax] },
+    { key: 'luz', label: 'Luz', unit: 'Lm', range: [limits.luzMin, limits.luzMax] },
+  ];
+  const currentMetric = metricOptions.find(metric => metric.key === selectedMetric) ?? metricOptions[0];
+  const metricValues = history[selectedMetric] ?? [];
+  const metricMean = mean(metricValues);
+  const metricMedian = median(metricValues);
+  const metricMode = mode(metricValues);
+  const metricStd = standardDeviation(metricValues);
+  const metricSkewness = skewness(metricValues);
+  const metricKurtosis = kurtosis(metricValues);
+  const metricRegression = regression(metricValues);
+  const metricProbability = probabilityWithinRange(metricValues, currentMetric.range);
+  const [ciMin, ciMax] = confidenceInterval(metricValues);
+  const sampleMin = metricValues.length ? Math.min(...metricValues) : 0;
+  const sampleMax = metricValues.length ? Math.max(...metricValues) : 0;
+  const sampleRange = sampleMax - sampleMin || 1;
+  const chartWidth = 300;
+  const chartHeight = 170;
+  const points = chartPoints(metricValues, chartWidth, chartHeight);
+  const statVisuals = [
+    { label: 'Media', value: `${round(metricMean)} ${currentMetric.unit}`, visual: normalizeInSample(metricMean, metricValues), helper: 'posicao na amostra' },
+    { label: 'Mediana', value: `${round(metricMedian)} ${currentMetric.unit}`, visual: normalizeInSample(metricMedian, metricValues), helper: 'centro ordenado' },
+    { label: 'Moda', value: `${round(metricMode)} ${currentMetric.unit}`, visual: normalizeInSample(metricMode, metricValues), helper: 'valor mais frequente' },
+    { label: 'Desvio Padrao', value: `${round(metricStd)} ${currentMetric.unit}`, visual: clamp(metricStd / sampleRange), helper: 'dispersao relativa' },
+    { label: 'Assimetria', value: round(metricSkewness), visual: clamp((metricSkewness + 2) / 4), helper: metricSkewness > 0 ? 'cauda a direita' : 'cauda a esquerda' },
+    { label: 'Curtose', value: round(metricKurtosis), visual: clamp((metricKurtosis + 3) / 6), helper: metricKurtosis > 0 ? 'pico acentuado' : 'mais achatada' },
+    { label: 'Prob. no limite', value: metricProbability == null ? '-' : `${round(metricProbability * 100, 1)}%`, visual: metricProbability ?? 0, helper: 'chance estimada' },
+    { label: 'Regressao', value: `${round(metricRegression.slope, 3)} ${currentMetric.unit}/leitura`, visual: clamp((metricRegression.slope / sampleRange) + 0.5), helper: metricRegression.slope >= 0 ? 'tendencia de alta' : 'tendencia de baixa' },
+    { label: 'R2', value: round(metricRegression.r2, 3), visual: clamp(metricRegression.r2), helper: 'forca do ajuste' },
+    { label: 'IC 95%', value: `${round(ciMin)} - ${round(ciMax)}`, visual: clamp((ciMax - ciMin) / sampleRange), helper: 'largura do intervalo' },
+  ];
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -157,6 +332,7 @@ export const DetailsScreen: React.FC<DetailsScreenProps> = ({
             <View style={styles.sensorGrid}>
               {[
                 { icon: Thermometer, label: 'Temperatura', value: `${sensors.temp} C`, range: `${limits.tempMin} - ${limits.tempMax}` },
+                { icon: Thermometer, label: 'Temperatura Solo', value: `${sensors.temp_solo} C`, range: 'Solo' },
                 { icon: Droplet, label: 'Umidade Solo', value: `${sensors.umid_solo}%`, range: `${limits.umidSoloMin}% - ${limits.umidSoloMax}%` },
                 { icon: Wind, label: 'Umidade Ar', value: `${sensors.umid_ar}%`, range: '30% - 80%' },
                 { icon: Sun, label: 'Luminosidade', value: `${sensors.luz} Lm`, range: `${limits.luzMin} - ${limits.luzMax}` },
@@ -239,20 +415,66 @@ export const DetailsScreen: React.FC<DetailsScreenProps> = ({
       {activeTab === 'metrics' && (
         <View style={styles.tabContent}>
           <View style={styles.metricsPanel}>
-            <Text style={styles.panelTitle}>Historico de Metricas</Text>
-            <Text style={styles.metricsInfo}>Ultimas leituras de sensores</Text>
-            <View style={styles.metricsChart}>
-              {[
-                { label: 'Temperatura:', values: history.temp, unit: ' C' },
-                { label: 'Umidade Ar:', values: history.umid_ar, unit: '%' },
-                { label: 'Umidade Solo:', values: history.umid_solo, unit: '%' },
-                { label: 'Luminosidade:', values: history.luz, unit: ' Lm' },
-              ].map((metric) => (
-                <View key={metric.label} style={styles.metricRow}>
-                  <Text style={styles.metricRowLabel}>{metric.label}</Text>
-                  <Text style={styles.metricRowValues}>
-                    {metric.values.length ? `${metric.values.join(' -> ')}${metric.unit}` : 'Sem dados'}
+            <Text style={styles.panelTitle}>Analise Estatistica</Text>
+            <Text style={styles.metricsInfo}>
+              {metricValues.length} leituras de {currentMetric.label.toLowerCase()}
+            </Text>
+
+            <View style={styles.metricTabs}>
+              {metricOptions.map(metric => (
+                <TouchableOpacity
+                  key={metric.key}
+                  style={[styles.metricTabButton, selectedMetric === metric.key && styles.metricTabButtonActive]}
+                  onPress={() => setSelectedMetric(metric.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.metricTabText, selectedMetric === metric.key && styles.metricTabTextActive]}>
+                    {metric.label}
                   </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.chartPanel}>
+              {metricValues.length ? (
+                <>
+                  <Svg width="100%" height={chartHeight + 24} viewBox={`0 0 ${chartWidth} ${chartHeight + 24}`}>
+                    <Line x1="0" y1={chartHeight} x2={chartWidth} y2={chartHeight} stroke={colors.zinc[800]} strokeWidth="1" />
+                    <Line x1="0" y1="0" x2="0" y2={chartHeight} stroke={colors.zinc[800]} strokeWidth="1" />
+                    <Polyline points={points} fill="none" stroke={colors.emerald} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+                    {metricValues.length === 1 && (
+                      <Circle cx={chartWidth / 2} cy={chartHeight / 2} r="4" fill={colors.emerald} />
+                    )}
+                  </Svg>
+                  <View style={styles.chartLegend}>
+                    <Text style={styles.chartLegendText}>Min {round(Math.min(...metricValues))}{currentMetric.unit}</Text>
+                    <Text style={styles.chartLegendText}>Max {round(Math.max(...metricValues))}{currentMetric.unit}</Text>
+                  </View>
+                  <View style={styles.distributionTrack}>
+                    <View style={[styles.distributionMarker, styles.meanMarker, { left: percentStyle(normalizeInSample(metricMean, metricValues)) }]} />
+                    <View style={[styles.distributionMarker, styles.medianMarker, { left: percentStyle(normalizeInSample(metricMedian, metricValues)) }]} />
+                    <View style={[styles.distributionMarker, styles.modeMarker, { left: percentStyle(normalizeInSample(metricMode, metricValues)) }]} />
+                  </View>
+                  <View style={styles.distributionLegend}>
+                    <Text style={styles.distributionLegendText}>Media</Text>
+                    <Text style={styles.distributionLegendText}>Mediana</Text>
+                    <Text style={styles.distributionLegendText}>Moda</Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.emptyMetricsText}>Sem dados suficientes para gerar grafico.</Text>
+              )}
+            </View>
+
+            <View style={styles.statsGrid}>
+              {statVisuals.map(stat => (
+                <View key={stat.label} style={styles.statCard}>
+                  <Text style={styles.statLabel}>{stat.label}</Text>
+                  <Text style={styles.statValue}>{stat.value}</Text>
+                  <View style={styles.statBarTrack}>
+                    <View style={[styles.statBarFill, { width: percentStyle(stat.visual) }]} />
+                  </View>
+                  <Text style={styles.statHelper}>{stat.helper}</Text>
                 </View>
               ))}
             </View>
@@ -300,8 +522,27 @@ const styles = StyleSheet.create({
   saveButtonText: { fontSize: 11, fontWeight: '700', color: 'black' },
   metricsPanel: { gap: 12 },
   metricsInfo: { fontSize: 10, color: colors.zinc[400], lineHeight: 15 },
-  metricsChart: { gap: 12, paddingVertical: 12 },
-  metricRow: { paddingHorizontal: 10, paddingVertical: 10, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 10, borderLeftWidth: 3, borderLeftColor: colors.emerald },
-  metricRowLabel: { fontSize: 9, fontWeight: '700', color: colors.zinc[300], marginBottom: 4 },
-  metricRowValues: { fontSize: 8, color: colors.emerald, fontWeight: '600', fontFamily: 'monospace' },
+  metricTabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  metricTabButton: { paddingHorizontal: 10, paddingVertical: 7, backgroundColor: colors.zinc[900], borderWidth: 1, borderColor: colors.zinc[800], borderRadius: 8 },
+  metricTabButtonActive: { backgroundColor: colors.emerald, borderColor: colors.emerald },
+  metricTabText: { fontSize: 9, fontWeight: '700', color: colors.zinc[400] },
+  metricTabTextActive: { color: 'black' },
+  chartPanel: { paddingHorizontal: 12, paddingVertical: 12, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 12, borderWidth: 1, borderColor: colors.zinc[900] },
+  chartLegend: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  chartLegendText: { fontSize: 8, color: colors.zinc[500], fontWeight: '700' },
+  distributionTrack: { height: 8, backgroundColor: colors.zinc[900], borderRadius: 4, marginTop: 12, position: 'relative', overflow: 'hidden' },
+  distributionMarker: { position: 'absolute', top: 0, width: 4, height: 8, borderRadius: 2 },
+  meanMarker: { backgroundColor: colors.emerald },
+  medianMarker: { backgroundColor: colors.zinc[300] },
+  modeMarker: { backgroundColor: colors.rose[500] },
+  distributionLegend: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  distributionLegendText: { fontSize: 8, color: colors.zinc[500], fontWeight: '700' },
+  emptyMetricsText: { fontSize: 10, color: colors.zinc[500], textAlign: 'center', paddingVertical: 36 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statCard: { width: '48%', paddingHorizontal: 10, paddingVertical: 10, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 10, borderLeftWidth: 3, borderLeftColor: colors.emerald },
+  statLabel: { fontSize: 8, fontWeight: '700', color: colors.zinc[500], marginBottom: 4 },
+  statValue: { fontSize: 10, color: 'white', fontWeight: '700' },
+  statBarTrack: { height: 5, backgroundColor: colors.zinc[900], borderRadius: 3, marginTop: 8, overflow: 'hidden' },
+  statBarFill: { height: 5, backgroundColor: colors.emerald, borderRadius: 3 },
+  statHelper: { fontSize: 7, color: colors.zinc[600], marginTop: 5, fontWeight: '600' },
 });

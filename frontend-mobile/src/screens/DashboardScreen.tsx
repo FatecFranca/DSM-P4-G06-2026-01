@@ -30,6 +30,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     Math.max(greenhouses.length, 1)
   ).toFixed(1);
 
+  const avgSoilTemp = (
+    greenhouses.reduce((sum, gh) => sum + (gh.sensors?.temp_solo ?? 0), 0) /
+    Math.max(greenhouses.length, 1)
+  ).toFixed(1);
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -65,6 +70,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <Droplet size={16} color={colors.emerald} />
             <Text style={styles.metricLabel}>Solo Médio</Text>
             <Text style={styles.metricValue}>{avgSoil}%</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Thermometer size={16} color={colors.emerald} />
+            <Text style={styles.metricLabel}>Temp Solo</Text>
+            <Text style={styles.metricValue}>{avgSoilTemp}Â°C</Text>
           </View>
         </View>
       </View>
@@ -108,8 +118,8 @@ const styles = StyleSheet.create({
   card:            { borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)', backgroundColor: colors.darkTertiary, marginBottom: 24 },
   greeting:        { fontSize: 14, fontWeight: '900', color: 'white' },
   subGreeting:     { fontSize: 12, color: colors.zinc[400], lineHeight: 18, marginTop: 8 },
-  metricsGrid:     { flexDirection: 'row', gap: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(16, 185, 129, 0.2)' },
-  metricCard:      { flex: 1, padding: 10, backgroundColor: 'rgba(0, 0, 0, 0.4)', borderWidth: 1, borderColor: colors.zinc[900], borderRadius: 12, alignItems: 'center' },
+  metricsGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(16, 185, 129, 0.2)' },
+  metricCard:      { flexGrow: 1, flexBasis: '30%', padding: 10, backgroundColor: 'rgba(0, 0, 0, 0.4)', borderWidth: 1, borderColor: colors.zinc[900], borderRadius: 12, alignItems: 'center' },
   metricLabel:     { fontSize: 8, color: colors.zinc[500], fontWeight: '600', marginTop: 4 },
   metricValue:     { fontSize: 12, fontWeight: '700', color: 'white', marginTop: 2 },
   sectionTitle:    { fontSize: 11, fontWeight: '900', color: colors.zinc[400], letterSpacing: 0.5, marginBottom: 4 },

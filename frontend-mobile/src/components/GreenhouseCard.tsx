@@ -84,6 +84,10 @@ export const GreenhouseCard: React.FC<GreenhouseCardProps> = ({ greenhouse, onPr
           <Text style={styles.telemetryValue}>{greenhouse.sensors.umid_solo}%</Text>
         </View>
         <View style={styles.telemetryItem}>
+          <Thermometer size={12} color={colors.zinc[400]} />
+          <Text style={styles.telemetryValue}>{greenhouse.sensors.temp_solo}Â°C</Text>
+        </View>
+        <View style={styles.telemetryItem}>
           <Sun size={12} color={colors.zinc[400]} />
           <Text style={styles.telemetryValue}>{greenhouse.sensors.luz} Lm</Text>
         </View>
