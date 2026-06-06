@@ -1,8 +1,10 @@
 import apiClient from './apiClient';
- 
+import { mapGreenhouse } from '../mapper/greenhouseMapper';
+
 export async function getGreenhouses() {
   const res = await apiClient.get('/greenhouses');
-  return res.data;
+
+  return res.data.map(mapGreenhouse);
 }
  
 export async function getGreenhouseById(id: string) {
