@@ -8,8 +8,15 @@
     token: string | null;
     user: User | null;
     login: (email: string, password: string) => Promise<void>;
+    register: (
+      name: string,
+      email: string,
+      password: string,
+      role: 'ADMIN' | 'MONITOR'
+    ) => Promise<void>;
     logout: () => Promise<void>;
     loading: boolean;
+    initializing: boolean;
   }
 
   const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,7 +24,8 @@
   export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [token, setToken] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [initializing, setInitializing] = useState(true);
 
     useEffect(() => {
       (async () => {
@@ -36,7 +44,7 @@
         } catch {
           await clearSession();
         } finally {
-          setLoading(false);
+          setInitializing(false);
         }
       })();
     }, []);
@@ -60,6 +68,20 @@
       }
     };
 
+    const register = async (
+      name: string,
+      email: string,
+      password: string,
+      role: 'ADMIN' | 'MONITOR'
+    ) => {
+      setLoading(true);
+      try {
+        await authService.register(name, email, password, role);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const logout = async () => {
       await clearSession();
       setToken(null);
@@ -67,7 +89,7 @@
     };
 
     return (
-      <AuthContext.Provider value={{ token, user, login, logout, loading }}>
+      <AuthContext.Provider value={{ token, user, login, register, logout, loading, initializing }}>
         {children}
       </AuthContext.Provider>
     );

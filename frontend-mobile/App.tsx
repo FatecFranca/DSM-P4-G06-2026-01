@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, TextInput, TouchableOpacity } from 'react-native';
-import { SafeAreaView, StatusBar, View, StyleSheet } from 'react-native';
+import { SafeAreaView, StatusBar, Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
 
 import { Header } from './src/components/Header';
 import { Console } from './src/components/Console';
@@ -11,6 +10,8 @@ import { DashboardScreen } from './src/screens/DashboardScreen';
 import { DetailsScreen } from './src/screens/DetailsScreen';
 import { AlertsScreen } from './src/screens/AlertsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
+import { RegisterScreen } from './src/screens/RegisterScreen';
 
 import { useGreenhouses } from './src/hooks/useGreenhouses';
 import { useAlerts } from './src/hooks/useAlerts';
@@ -24,7 +25,7 @@ import * as userService from './src/services/userService';
 
 // ─── Login Screen ─────────────────────────────────────────────────────────────
 
-function LoginScreen() {
+function LegacyLoginScreen() {
   const { login, loading } = useAuth();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -76,6 +77,7 @@ function LoginScreen() {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 function AppWithAuth() {
+  const [authPage, setAuthPage]                   = useState<'login' | 'register'>('login');
   const [currentPage, setCurrentPage]             = useState('dashboard');
   const [isInsideDetails, setIsInsideDetails]     = useState(false);
   const [showConsole, setShowConsole]             = useState(false);
@@ -84,7 +86,7 @@ function AppWithAuth() {
   const [users, setUsers]                         = useState<User[]>([]);
   const [refreshingSensors, setRefreshingSensors] = useState(false);
 
-  const { token, user, logout, loading: authLoading } = useAuth();
+  const { token, user, logout, initializing: authInitializing } = useAuth();
 
   const {
     greenhouses,
@@ -154,8 +156,14 @@ function AppWithAuth() {
     }
   };
 
-  if (authLoading) return null;
-  if (!token || !user) return <LoginScreen />;
+  if (authInitializing) return null;
+  if (!token || !user) {
+    return authPage === 'login' ? (
+      <LoginScreen onGoToRegister={() => setAuthPage('register')} />
+    ) : (
+      <RegisterScreen onGoToLogin={() => setAuthPage('login')} />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
