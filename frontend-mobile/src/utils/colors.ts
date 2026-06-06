@@ -1,0 +1,25 @@
+export const colors = {
+  dark: '#060807',
+  darkSecondary: '#080b09',
+  darkTertiary: '#0a110d',
+  emerald: '#10b981',
+  emeraldLight: '#34d399',
+  emeraldDark: '#059669',
+  emeraldVeryDark: '#064e3b',
+  zinc: {
+    100: '#f4f4f5',
+    300: '#d4d4d8',
+    400: '#a1a1a8',
+    500: '#71717a',
+    600: '#52525b',
+    700: '#3f3f46',
+    800: '#27272a',
+    900: '#18181b',
+    950: '#09090b',
+  },
+  rose: {
+    400: '#f87171',
+    500: '#ef4444',
+    950: '#500724',
+  },
+};

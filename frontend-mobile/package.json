@@ -1,0 +1,33 @@
+{
+  "name": "agrotech-mobile",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "test": "jest",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "axios": "^1.16.1",
+    "expo": "~54.0.0",
+    "lucide-react-native": "^0.525.0",
+    "mqtt": "5.0.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-svg": "15.12.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@types/react": "~19.1.10",
+    "babel-plugin-module-resolver": "^5.0.3",
+    "babel-preset-expo": "~54.0.10",
+    "react-native-svg-transformer": "^1.5.3",
+    "typescript": "~5.9.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
