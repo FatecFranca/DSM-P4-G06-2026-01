@@ -23,8 +23,10 @@ export interface Actuators {
 
 export interface History {
   temp: number[];
+  temp_solo: number[];
   umid_ar: number[];
   umid_solo: number[];
+  luz: number[];
 }
 
 export interface Greenhouse {
@@ -32,7 +34,6 @@ export interface Greenhouse {
   name: string;
   sector: string;
   status: 'healthy' | 'warning' | 'offline';
-  phase: string;
   sensors: Sensors;
   limits: Limits;
   actuators: Actuators;
