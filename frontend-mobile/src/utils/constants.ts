@@ -1,135 +1,67 @@
+import { Greenhouse } from '../types/greenhouse';
+import { Alert }      from '../types/alert';
+import { User }        from '../types/user';
+import { LogEntry }    from '../types/log';
 
-import { Greenhouse, Alert, User } from '../types';
+// ─── Static Fallbacks ─────────────────────────────────────────────────────────
 
-export const INITIAL_GREENHOUSES: Greenhouse[] = [
-  {
-    id: 'gh-01',
-    name: 'Estufa Alpha',
-    sector: 'Setor Norte',
-    status: 'healthy',
-    phase: 'Vegetativo',
-    sensors: {
-      export const INITIAL_ALERTS: Alert[] = [
-        {
-          id: 'alert-1',
-          greenhouseId: 'gh-1',
-          greenhouseName: 'Estufa 1',
-          type: 'warning',
-          metric: 'Temperatura',
-          message: 'Temperatura crítica de 35°C na estufa Estufa 1.',
-          timestamp: 'Há 2 minutos',
-          resolved: false,
-        },
-      ];
-      export const INITIAL_USERS: User[] = [
-        {
-          id: 'user-1',
-          name: 'Admin',
-          email: 'admin@agro.com',
-          role: 'admin',
-        },
-      ];
-      export const INITIAL_LOGS = [
-        {
-          id: 1,
-          time: '12:00:01',
-          source: 'Sistema',
-          msg: 'Sistema iniciado',
-          type: 'info',
-        },
-      ];
-      umid_ar: 42.1,
-      umid_solo: 35.0,
-      luz: 150,
-    },
-    limits: {
-      tempMin: 18,
-      tempMax: 27,
-      umidSoloMin: 50,
-      umidSoloMax: 90,
-      luzMin: 100,
-      luzMax: 500,
-    },
-    actuators: {
-      lampada: true,
-      exaustor: true,
-      bomba: false,
-    },
-    history: {
-      temp: [26.5, 27.0, 27.8, 28.4, 29.1, 29.3, 29.4, 29.5],
-      umid_ar: [50, 48, 47, 45, 44, 43, 42.5, 42.1],
-      umid_solo: [45, 42, 40, 39, 38, 37, 36, 35.0],
-    },
-    heartbeat: true,
-    lastSeen: 'Online',
-  },
-  {
-    id: 'gh-03',
-    name: 'Cúpula Gamma',
-    sector: 'Setor Leste',
-    status: 'healthy',
-    phase: 'Floração',
-    sensors: {
-      temp: 22.8,
-      umid_ar: 64.2,
-      umid_solo: 71.5,
-      luz: 380,
-    },
-    limits: {
-      tempMin: 15,
-      tempMax: 26,
-      umidSoloMin: 45,
-      umidSoloMax: 85,
-      luzMin: 150,
-      luzMax: 600,
-    },
-    actuators: {
-      lampada: false,
-      exaustor: false,
-      bomba: false,
-    },
-    history: {
-      temp: [22.5, 22.6, 22.7, 22.8, 22.8, 22.7, 22.8, 22.8],
-      umid_ar: [63, 63, 64, 64, 64, 65, 64, 64.2],
-      umid_solo: [75, 74, 73, 73, 72, 72, 71, 71.5],
-    },
-    heartbeat: false,
-    lastSeen: 'Offline a 5min',
-  },
-];
+export const INITIAL_GREENHOUSES: Greenhouse[] = [];
+  
+export const INITIAL_ALERTS: Alert[] = [];
 
-export const INITIAL_ALERTS: Alert[] = [
-  {
-    id: 'alert-1',
-    greenhouseId: 'gh-02',
-    greenhouseName: 'Estufa Beta',
-    type: 'critical',
-    metric: 'Umidade do Solo',
-    message: 'Baixa umidade detectada (35.0%). Perigo de estresse hídrico agudo.',
-    timestamp: '5 min atrás',
-    resolved: false,
-  },
-  {
-    id: 'alert-2',
-    greenhouseId: 'gh-02',
-    greenhouseName: 'Estufa Beta',
-    type: 'warning',
-    metric: 'Temperatura',
-    message: 'Temperatura ultrapassou limite superior (29.5°C vs 27.0°C).',
-    timestamp: '8 min atrás',
-    resolved: false,
-  },
-];
+export const INITIAL_USERS: User[] = [];
 
-export const INITIAL_USERS: User[] = [
-  { id: 'usr-1', name: 'Gabriel Santos', role: 'ADMIN', status: 'active', avatar: '👨‍🌾' },
-  { id: 'usr-2', name: 'Juliana Silva', role: 'MONITOR', status: 'active', avatar: '👩‍🔬' },
-];
-
-export const INITIAL_LOGS = [
-  { id: 1, time: '20:34:01', source: 'SOCKET', msg: 'Autenticado com JWT via websocket.', type: 'success' as const },
-  { id: 2, time: '20:34:03', source: 'MQTT', msg: 'Inscrito no tópico: agrotech/estufa/+/telemetria', type: 'success' as const },
-  { id: 3, time: '20:34:06', source: 'NODE_GH_01', msg: 'Uplink recebido: { temp: 24.2, umid_solo: 62.1 }', type: 'info' as const },
+export const INITIAL_LOGS: LogEntry[] = [
+  { id: 1, time: '20:34:01', source: 'SOCKET',     msg: 'Autenticado com JWT via websocket.',                    type: 'success' },
+  { id: 2, time: '20:34:03', source: 'MQTT',        msg: 'Inscrito no tópico: agrotech/estufa/+/telemetria',    type: 'success' },
+  { id: 3, time: '20:34:06', source: 'NODE_GH_01', msg: 'Uplink recebido: { temp: 24.2, umid_solo: 62.1 }',    type: 'info'    },
 ];
 
 export const SECTORS = ['Setor Norte', 'Setor Sul', 'Setor Leste', 'Setor Oeste'];
+
+// ─── API Loaders ──────────────────────────────────────────────────────────────
+
+import * as greenhouseService from '../services/greenhouseService';
+import * as alertService      from '../services/alertService';
+import * as userService       from '../services/userService';
+import * as logService        from '../services/logService';
+
+export async function loadGreenhouses(): Promise<Greenhouse[]> {
+  try {
+    const data = await greenhouseService.getGreenhouses();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('[constants] loadGreenhouses error:', e);
+    return INITIAL_GREENHOUSES;
+  }
+}
+
+export async function loadAlerts(): Promise<Alert[]> {
+  try {
+    const data = await alertService.getAlerts();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('[constants] loadAlerts error:', e);
+    return INITIAL_ALERTS;
+  }
+}
+
+export async function loadUsers(): Promise<User[]> {
+  try {
+    const data = await userService.getUsers();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('[constants] loadUsers error:', e);
+    return INITIAL_USERS;
+  }
+}
+
+export async function loadLogs(): Promise<LogEntry[]> {
+  try {
+    const data = await logService.getLogs();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('[constants] loadLogs error:', e);
+    return INITIAL_LOGS;
+  }
+}
