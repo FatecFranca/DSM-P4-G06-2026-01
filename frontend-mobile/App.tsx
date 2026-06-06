@@ -82,6 +82,7 @@ function AppWithAuth() {
   const [isSocketConnected, setIsSocketConnected] = useState(true);
   const [showAddModal, setShowAddModal]           = useState(false);
   const [users, setUsers]                         = useState<User[]>([]);
+  const [refreshingSensors, setRefreshingSensors] = useState(false);
 
   const { token, user, loading: authLoading } = useAuth();
 
@@ -95,6 +96,7 @@ function AppWithAuth() {
     toggleActuator,
     updateGreenhouseLimits,
     deleteGreenhouse,
+    refreshSensors,
   } = useGreenhouses(token);
 
   const {
@@ -131,6 +133,17 @@ function AppWithAuth() {
     return updateGreenhouseLimits(selectedGreenhouse.id, limits);
   };
 
+  const handleRefreshSensors = async () => {
+    if (greenhouses.length === 0 || refreshingSensors) return;
+
+    setRefreshingSensors(true);
+    try {
+      await Promise.all(greenhouses.map(gh => refreshSensors(gh.id)));
+    } finally {
+      setRefreshingSensors(false);
+    }
+  };
+
   const handleDeleteGreenhouse = async (id: string) => {
     try {
       await deleteGreenhouse(id);
@@ -154,6 +167,8 @@ function AppWithAuth() {
         onConsoleToggle={() => setShowConsole(v => !v)}
         showConsole={showConsole}
         user={user}
+        onRefreshSensors={handleRefreshSensors}
+        refreshingSensors={refreshingSensors}
       />
 
       {showConsole && <Console logs={logs} onClose={() => setShowConsole(false)} />}

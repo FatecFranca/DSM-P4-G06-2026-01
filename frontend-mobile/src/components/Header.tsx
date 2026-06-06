@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { Leaf, RefreshCw, Database } from 'lucide-react-native';
 import { TouchableOpacity } from 'react-native';
 import { colors } from '../utils/colors';
@@ -12,6 +12,8 @@ interface HeaderProps {
   onConsoleToggle: () => void;
   showConsole: boolean;
   user?: User | null;
+  onRefreshSensors: () => void;
+  refreshingSensors: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +22,8 @@ export const Header: React.FC<HeaderProps> = ({
   onConsoleToggle,
   showConsole,
   user,
+  onRefreshSensors,
+  refreshingSensors,
 }) => {
   return (
     <View style={styles.header}>
@@ -45,6 +49,25 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       <View style={styles.headerActions}>
+        <TouchableOpacity
+          style={[
+            styles.headerButton,
+            refreshingSensors && { opacity: 0.7 },
+          ]}
+          onPress={onRefreshSensors}
+          disabled={refreshingSensors}
+          activeOpacity={0.7}
+        >
+          {refreshingSensors ? (
+            <ActivityIndicator size="small" color={colors.emerald} />
+          ) : (
+            <RefreshCw size={12} color={colors.emerald} />
+          )}
+          <Text style={[styles.headerButtonText, { color: colors.emerald }]}>
+            Sensores
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[
             styles.headerButton,
