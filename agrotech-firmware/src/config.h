@@ -75,8 +75,9 @@
 //  P23 (resistivo): solo seco = resistência alta = ADC alto
 //                   solo molhado = resistência baixa = ADC baixo
 //  Meça esses valores com o sensor no ar (seco) e na água (molhado)
-#define SOLO_VALOR_SECO    3000   // ADC lido com sensor no ar
-#define SOLO_VALOR_MOLHADO  500   // ADC lido com sensor na água
+#define SOLO_ESCALA_INVERTIDA false // 0% = seco, 100% = molhado
+#define SOLO_VALOR_SECO       0   // ADC lido fora da agua
+#define SOLO_VALOR_MOLHADO 2250   // ADC lido em agua/solo molhado
 
 // ── Calibração do LM35DZ ─────────────────────────────────────────
 //  Tensão de referência do ADC: 3300 mV (atenuação 11dB)

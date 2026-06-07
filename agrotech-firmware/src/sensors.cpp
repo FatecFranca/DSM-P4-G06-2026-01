@@ -18,7 +18,11 @@ float lm35AdcParaTemp(int adc) {
 }
 
 float soloAdcParaPct(int adc) {
+#if SOLO_ESCALA_INVERTIDA
+    float pct = map(adc, SOLO_VALOR_SECO, SOLO_VALOR_MOLHADO, 100, 0);
+#else
     float pct = map(adc, SOLO_VALOR_SECO, SOLO_VALOR_MOLHADO, 0, 100);
+#endif
     return constrain(pct, 0.0f, 100.0f);
 }
 
