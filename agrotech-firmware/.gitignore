@@ -1,0 +1,6 @@
+# Segredos — nunca commitar
+src/secrets.h
+
+# PlatformIO
+.pio/
+.vscode/

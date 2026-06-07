@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "AgroTech Mobile",
+    "slug": "agrotech-mobile",
+    "version": "0.0.1",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.agrotech.mobile"
+    },
+    "android": {
+      "package": "com.agrotech.mobile"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ]
+  }
+}

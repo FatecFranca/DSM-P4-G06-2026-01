@@ -1,0 +1,73 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+
+# Production
+build
+dist
+.cache
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+*.bak
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# React Native
+.gradle
+.m2
+.classpath
+.project
+.settings
+.vscode
+local.properties
+*.iml
+*.hprof
+
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+project.xcworkspace/
+tsconfig.tsbuildinfo
+
+# Android/IntelliJ
+android
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.apk
+*.jks
+
+# Metro
+.metro-health-check*
+.expo
