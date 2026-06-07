@@ -8,7 +8,6 @@ import { User } from '../types';
 
 interface HeaderProps {
   isSocketConnected: boolean;
-  onSocketToggle: () => void;
   onConsoleToggle: () => void;
   showConsole: boolean;
   user?: User | null;
@@ -18,7 +17,6 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   isSocketConnected,
-  onSocketToggle,
   onConsoleToggle,
   showConsole,
   user,
@@ -75,8 +73,8 @@ export const Header: React.FC<HeaderProps> = ({
               ? { borderColor: colors.emerald }
               : { borderColor: colors.rose[500] },
           ]}
-          onPress={onSocketToggle}
           activeOpacity={0.7}
+          disabled
         >
           <RefreshCw
             size={12}

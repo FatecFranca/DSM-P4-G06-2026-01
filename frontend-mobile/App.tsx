@@ -81,7 +81,6 @@ function AppWithAuth() {
   const [currentPage, setCurrentPage]             = useState('dashboard');
   const [isInsideDetails, setIsInsideDetails]     = useState(false);
   const [showConsole, setShowConsole]             = useState(false);
-  const [isSocketConnected, setIsSocketConnected] = useState(true);
   const [showAddModal, setShowAddModal]           = useState(false);
   const [users, setUsers]                         = useState<User[]>([]);
   const [refreshingSensors, setRefreshingSensors] = useState(false);
@@ -99,6 +98,8 @@ function AppWithAuth() {
     updateGreenhouseLimits,
     deleteGreenhouse,
     refreshSensors,
+    realtimeStatus,
+    runtimeMetrics,
   } = useGreenhouses(token);
 
   const {
@@ -170,8 +171,7 @@ function AppWithAuth() {
       <StatusBar barStyle="light-content" backgroundColor={colors.dark} />
 
       <Header
-        isSocketConnected={isSocketConnected}
-        onSocketToggle={() => setIsSocketConnected(v => !v)}
+        isSocketConnected={realtimeStatus === 'connected'}
         onConsoleToggle={() => setShowConsole(v => !v)}
         showConsole={showConsole}
         user={user}
@@ -185,6 +185,7 @@ function AppWithAuth() {
         {currentPage === 'dashboard' && !isInsideDetails && (
           <DashboardScreen
             greenhouses={greenhouses}
+            runtimeMetrics={runtimeMetrics}
             loading={greenhousesLoading}
             error={greenhousesError}
             onGreenhouseSelect={gh => {

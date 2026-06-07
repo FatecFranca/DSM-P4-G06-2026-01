@@ -3,6 +3,7 @@ import { Greenhouse } from '../types/greenhouse';
 import * as greenhouseService from '../services/greenhouseService';
 import * as sensorService from '../services/sensorService';
 import * as actuatorService from '../services/actuatorService';
+import { RuntimeMetricsSnapshot, subscribeToGreenhouseTelemetry, TelemetryPayload } from '../services/realtimeService';
 import { mapGreenhouse } from '../mapper/greenhouseMapper';
 
 const ensureToken = (token: string | null): string => {
@@ -25,11 +26,63 @@ const buildHistory = (history: sensorService.SensorHistoryRow[]) => {
   };
 };
 
+const getStatus = (gh: Pick<Greenhouse, 'heartbeat' | 'sensors' | 'limits'>): Greenhouse['status'] => {
+  if (!gh.heartbeat) return 'offline';
+
+  const tempOut = gh.sensors.temp < gh.limits.tempMin || gh.sensors.temp > gh.limits.tempMax;
+  const soilOut =
+    gh.sensors.umid_solo < gh.limits.umidSoloMin || gh.sensors.umid_solo > gh.limits.umidSoloMax;
+
+  return tempOut || soilOut ? 'warning' : 'healthy';
+};
+
+const applyRealtimePayload = (gh: Greenhouse, payload: TelemetryPayload): Greenhouse => {
+  const telemetry = payload.latestTelemetry ?? payload;
+  const sensors = {
+    ...gh.sensors,
+    ...payload.sensors,
+    ...(typeof telemetry.temp === 'number' && { temp: telemetry.temp }),
+    ...(typeof telemetry.temp_solo === 'number' && { temp_solo: telemetry.temp_solo }),
+    ...(typeof telemetry.umid_ar === 'number' && { umid_ar: telemetry.umid_ar }),
+    ...(typeof telemetry.umid_solo === 'number' && { umid_solo: telemetry.umid_solo }),
+    ...(typeof telemetry.luz === 'number' && { luz: telemetry.luz }),
+  };
+
+  const next: Greenhouse = {
+    ...gh,
+    sensors,
+    history: {
+      temp: typeof sensors.temp === 'number' ? [...gh.history.temp.slice(-47), sensors.temp] : gh.history.temp,
+      temp_solo:
+        typeof sensors.temp_solo === 'number'
+          ? [...gh.history.temp_solo.slice(-47), sensors.temp_solo]
+          : gh.history.temp_solo,
+      umid_ar:
+        typeof sensors.umid_ar === 'number' ? [...gh.history.umid_ar.slice(-47), sensors.umid_ar] : gh.history.umid_ar,
+      umid_solo:
+        typeof sensors.umid_solo === 'number'
+          ? [...gh.history.umid_solo.slice(-47), sensors.umid_solo]
+          : gh.history.umid_solo,
+      luz: typeof sensors.luz === 'number' ? [...gh.history.luz.slice(-47), sensors.luz] : gh.history.luz,
+    },
+    heartbeat: true,
+    lastSeen: payload.latestTelemetry?.timestamp ?? payload.timestamp ?? new Date().toLocaleTimeString(),
+  };
+
+  return {
+    ...next,
+    status: getStatus(next),
+  };
+};
+
 export const useGreenhouses = (token: string | null) => {
   const [greenhouses, setGreenhouses] = useState<Greenhouse[]>([]);
   const [selectedGreenhouse, setSelectedGreenhouse] = useState<Greenhouse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'unavailable'>('disconnected');
+  const [runtimeMetrics, setRuntimeMetrics] = useState<RuntimeMetricsSnapshot | null>(null);
+  const greenhouseIds = greenhouses.map((gh) => gh.id).join('|');
 
   useEffect(() => {
     let mounted = true;
@@ -95,6 +148,46 @@ export const useGreenhouses = (token: string | null) => {
       mounted = false;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let unsubscribe: (() => void) | undefined;
+    let active = true;
+    const ids = greenhouseIds.split('|').filter(Boolean);
+
+    if (ids.length === 0) {
+      setRealtimeStatus('disconnected');
+      return () => {
+        active = false;
+      };
+    }
+
+    try {
+      unsubscribe = subscribeToGreenhouseTelemetry(
+        token,
+        ids,
+        (payload) => {
+          const greenhouseId = payload.greenhouseId ?? payload.id;
+          if (!greenhouseId) return;
+
+          setGreenhouses(prev => prev.map(gh => gh.id === greenhouseId ? applyRealtimePayload(gh, payload) : gh));
+          setSelectedGreenhouse(prev => prev?.id === greenhouseId ? applyRealtimePayload(prev, payload) : prev);
+        },
+        setRuntimeMetrics,
+        (status) => {
+          if (active) setRealtimeStatus(status);
+        }
+      );
+    } catch {
+      if (active) setRealtimeStatus('unavailable');
+    }
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, [greenhouseIds, token]);
 
   const refreshSensors = async (id: string) => {
     const validToken = ensureToken(token);
@@ -193,6 +286,8 @@ export const useGreenhouses = (token: string | null) => {
     setSelectedGreenhouse,
     loading,
     error,
+    realtimeStatus,
+    runtimeMetrics,
     addGreenhouse,
     toggleActuator,
     updateGreenhouseLimits,

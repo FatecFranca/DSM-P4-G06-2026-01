@@ -4,9 +4,12 @@ import { Plus, Thermometer, Droplet } from 'lucide-react-native';
 import { GreenhouseCard } from '../components';
 import { Greenhouse } from '../types';
 import { colors } from '../utils/colors';
+import { StatisticsCarousel } from '../components/StatisticsCarousel';
+import { RuntimeMetricsSnapshot } from '../services/realtimeService';
 
 interface DashboardScreenProps {
   greenhouses: Greenhouse[];
+  runtimeMetrics: RuntimeMetricsSnapshot | null;
   loading?: boolean;
   error?: string | null;
   onGreenhouseSelect: (greenhouse: Greenhouse) => void;
@@ -15,6 +18,7 @@ interface DashboardScreenProps {
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   greenhouses,
+  runtimeMetrics,
   loading = false,
   error = null,
   onGreenhouseSelect,
@@ -79,8 +83,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </View>
       </View>
 
+      <StatisticsCarousel greenhouses={greenhouses} runtimeMetrics={runtimeMetrics} />
+
       {/* Greenhouse nodes stack */}
-      <View style={{ marginBottom: 24 }}>
+      <View style={{ marginBottom: 24, marginTop: 20 }}>
         <Text style={styles.sectionTitle}>Estufas Online</Text>
         <Text style={styles.sectionSubtitle}>Toque para configurar</Text>
 
