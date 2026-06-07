@@ -29,7 +29,7 @@ export default function App() {
   const [newGhName, setNewGhName] = useState('');
   const [newGhSector, setNewGhSector] = useState('Setor Norte');
 
-  const { greenhouses, toggleActuator, updateLimits, addGreenhouse, loading, error, realtimeStatus, setGreenhouses } =
+  const { greenhouses, toggleActuator, updateLimits, addGreenhouse, loading, error, realtimeStatus, runtimeMetrics, setGreenhouses } =
     useGreenhouses({ token });
 
   const handleDeleteGreenhouse = async (ghId: string) => {
@@ -131,6 +131,7 @@ export default function App() {
           {!loading && currentPage === 'dashboard' && (
             <DashboardPage
               greenhouses={greenhouses}
+              runtimeMetrics={runtimeMetrics}
               logs={logs}
               onAddGreenhouse={() => setShowAddModal(true)}
               onNavigateToDetails={handleNavigateToDetails}

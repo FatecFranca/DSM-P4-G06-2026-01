@@ -1,10 +1,13 @@
 import { Plus, Sparkles, Activity } from 'lucide-react';
 import { Greenhouse, TerminalLog } from '../types';
 import { Terminal } from '../components';
+import { StatisticsCarousel } from '../components/StatisticsCarousel';
 import { getStatusBgColor } from '../utils';
+import { RuntimeMetricsSnapshot } from '../services/realtimeService';
 
 interface DashboardPageProps {
   greenhouses: Greenhouse[];
+  runtimeMetrics: RuntimeMetricsSnapshot | null;
   logs: TerminalLog[];
   onAddGreenhouse: () => void;
   onNavigateToDetails: (gh: Greenhouse) => void;
@@ -13,6 +16,7 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   greenhouses,
+  runtimeMetrics,
   logs,
   onAddGreenhouse,
   onNavigateToDetails,
@@ -71,6 +75,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <Metric label="Heartbeat Nodes" value={`${onlineGreenhouses}`} suffix={`/ ${greenhouses.length} online`} />
         </div>
       </div>
+
+      <StatisticsCarousel greenhouses={greenhouses} runtimeMetrics={runtimeMetrics} />
 
       <div>
         <div className="flex items-center justify-between mb-4">

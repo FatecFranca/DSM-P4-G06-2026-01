@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Greenhouse } from '../types';
 import * as actuatorService from '../services/actuatorService';
 import * as greenhouseService from '../services/greenhouseService';
-import { subscribeToGreenhouseTelemetry } from '../services/realtimeService';
+import { RuntimeMetricsSnapshot, subscribeToGreenhouseTelemetry, TelemetryPayload } from '../services/realtimeService';
 import * as sensorService from '../services/sensorService';
 
 interface UseGreenhousesOptions {
@@ -113,6 +113,8 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'unavailable'>('disconnected');
+  const [runtimeMetrics, setRuntimeMetrics] = useState<RuntimeMetricsSnapshot | null>(null);
+  const greenhouseIds = greenhouses.map((gh) => gh.id).join('|');
 
   const refreshGreenhouses = useCallback(async () => {
     if (!token) {
@@ -150,61 +152,65 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
     let unsubscribe: (() => void) | undefined;
     let active = true;
 
+    const applyTelemetry = (payload: TelemetryPayload) => {
+      const greenhouseId = payload.greenhouseId ?? payload.id;
+      if (!greenhouseId) return;
+      const telemetry = payload.latestTelemetry ?? payload;
+      const lastSeen =
+        payload.latestTelemetry?.timestamp ?? payload.timestamp ?? new Date().toLocaleTimeString();
+
+      setGreenhouses((prev) =>
+        prev.map((item) => {
+          if (item.id !== greenhouseId) return item;
+
+          const sensors = {
+            ...item.sensors,
+            ...payload.sensors,
+            ...(typeof telemetry.temp === 'number' && { temp: telemetry.temp }),
+            ...(typeof telemetry.temp_solo === 'number' && { temp_solo: telemetry.temp_solo }),
+            ...(typeof telemetry.umid_ar === 'number' && { umid_ar: telemetry.umid_ar }),
+            ...(typeof telemetry.umid_solo === 'number' && { umid_solo: telemetry.umid_solo }),
+            ...(typeof telemetry.luz === 'number' && { luz: telemetry.luz })
+          };
+
+          const next: Greenhouse = {
+            ...item,
+            id: item.id,
+            sensors,
+            history: {
+              temp: typeof sensors.temp === 'number' ? [...item.history.temp.slice(-47), sensors.temp] : item.history.temp,
+              temp_solo:
+                typeof sensors.temp_solo === 'number'
+                  ? [...item.history.temp_solo.slice(-47), sensors.temp_solo]
+                  : item.history.temp_solo,
+              umid_ar:
+                typeof sensors.umid_ar === 'number'
+                  ? [...item.history.umid_ar.slice(-47), sensors.umid_ar]
+                  : item.history.umid_ar,
+              umid_solo:
+                typeof sensors.umid_solo === 'number'
+                  ? [...item.history.umid_solo.slice(-47), sensors.umid_solo]
+                  : item.history.umid_solo,
+              luz: typeof sensors.luz === 'number' ? [...item.history.luz.slice(-47), sensors.luz] : item.history.luz
+            },
+            heartbeat: true,
+            lastSeen
+          };
+
+          return {
+            ...next,
+            status: getStatus(next)
+          };
+        })
+      );
+    };
+
+    const ids = greenhouseIds.split('|').filter(Boolean);
     subscribeToGreenhouseTelemetry(
       token,
-      (payload) => {
-        const greenhouseId = payload.greenhouseId ?? payload.id;
-        if (!greenhouseId) return;
-        const telemetry = payload.latestTelemetry ?? payload;
-        const lastSeen =
-          payload.latestTelemetry?.timestamp ?? payload.timestamp ?? new Date().toLocaleTimeString();
-
-        setGreenhouses((prev) =>
-          prev.map((item) => {
-            if (item.id !== greenhouseId) return item;
-
-            const sensors = {
-              ...item.sensors,
-              ...payload.sensors,
-              ...(typeof telemetry.temp === 'number' && { temp: telemetry.temp }),
-              ...(typeof telemetry.temp_solo === 'number' && { temp_solo: telemetry.temp_solo }),
-              ...(typeof telemetry.umid_ar === 'number' && { umid_ar: telemetry.umid_ar }),
-              ...(typeof telemetry.umid_solo === 'number' && { umid_solo: telemetry.umid_solo }),
-              ...(typeof telemetry.luz === 'number' && { luz: telemetry.luz })
-            };
-
-            const next: Greenhouse = {
-              ...item,
-              ...payload,
-              id: item.id,
-              sensors,
-              history: {
-                temp: typeof sensors.temp === 'number' ? [...item.history.temp.slice(-47), sensors.temp] : item.history.temp,
-                temp_solo:
-                  typeof sensors.temp_solo === 'number'
-                    ? [...item.history.temp_solo.slice(-47), sensors.temp_solo]
-                    : item.history.temp_solo,
-                umid_ar:
-                  typeof sensors.umid_ar === 'number'
-                    ? [...item.history.umid_ar.slice(-47), sensors.umid_ar]
-                    : item.history.umid_ar,
-                umid_solo:
-                  typeof sensors.umid_solo === 'number'
-                    ? [...item.history.umid_solo.slice(-47), sensors.umid_solo]
-                    : item.history.umid_solo,
-                luz: typeof sensors.luz === 'number' ? [...item.history.luz.slice(-47), sensors.luz] : item.history.luz
-              },
-              heartbeat: true,
-              lastSeen
-            };
-
-            return {
-              ...next,
-              status: getStatus(next)
-            };
-          })
-        );
-      },
+      ids,
+      applyTelemetry,
+      setRuntimeMetrics,
       (status) => {
         if (active) setRealtimeStatus(status);
       }
@@ -220,7 +226,7 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
       active = false;
       unsubscribe?.();
     };
-  }, [token]);
+  }, [greenhouseIds, token]);
 
   const addGreenhouse = useCallback(
     async (newGh: { name: string; description?: string }) => {
@@ -309,6 +315,7 @@ export const useGreenhouses = ({ token }: UseGreenhousesOptions) => {
     loading,
     error,
     realtimeStatus,
+    runtimeMetrics,
     setGreenhouses
   };
 };
