@@ -62,6 +62,7 @@ export interface ServerToClientEvents {
   'greenhouse:offline': (data: { greenhouseId: string; since: string }) => void;
   'alert:critical': (data: { id: string; greenhouseId: string; type: string; message: string }) => void;
   'heartbeat:update': (data: HeartbeatPayload & { greenhouseId: string }) => void;
+  'runtime:metrics': (data: import('../realtime/runtime-metrics.service').RuntimeMetricsSnapshot) => void;
 }
 
 export interface ClientToServerEvents {

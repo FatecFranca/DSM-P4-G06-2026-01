@@ -18,7 +18,6 @@ export function connectMqtt(): MqttClient {
     clean: true,
     reconnectPeriod: 5000,
     connectTimeout: 30000,
-    // QoS 1 for all subscriptions on commands
     will: {
       topic: 'agrotech/backend/status',
       payload: JSON.stringify({ status: 'OFFLINE' }),
@@ -29,18 +28,7 @@ export function connectMqtt(): MqttClient {
 
   client.on('connect', () => {
     logger.info('MQTT connected', { broker: env.MQTT_URL });
-
     client!.publish('agrotech/backend/status', JSON.stringify({ status: 'ONLINE' }), { qos: 1, retain: true });
-
-    // Subscribes aqui dentro para sobreviver a reconexões
-    client!.subscribe(
-      ['agrotech/+/sensores/#', 'agrotech/+/status/#'],
-      { qos: 1 },
-      (err, granted) => {
-        if (err) logger.error('Subscribe erro', { err });
-        else logger.info('Subscribe aceito', { granted });
-      }
-    );
   });
 
   client.on('reconnect', () => logger.warn('MQTT reconnecting...'));

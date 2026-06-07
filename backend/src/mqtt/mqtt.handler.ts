@@ -13,6 +13,14 @@ import {
   ServerToClientEvents,
   ClientToServerEvents,
 } from '../types';
+import {
+  emitActuatorStatus,
+  emitCriticalAlert,
+  emitGreenhouseOffline,
+  emitHeartbeat,
+  emitSensorTelemetry,
+} from '../realtime/realtime.service';
+import { observeMqttMessage } from '../realtime/runtime-metrics.service';
 
 const sensorsSvc = new SensorsService();
 const actuatorsSvc = new ActuatorsService();
@@ -20,13 +28,68 @@ const alertsSvc = new AlertsService();
 
 const HEARTBEAT_TTL = 15 * 60; // 15 min in seconds (RN11)
 const HEARTBEAT_KEY = (id: string) => `heartbeat:${id}`;
+const MQTT_TOPICS = ['agrotech/+/sensores/#', 'agrotech/+/status/#'];
+
+function readNumber(payload: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return null;
+}
+
+function normalizeSensorPayload(payload: unknown): SensorPayload | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const data = payload as Record<string, unknown>;
+
+  return {
+    temp: readNumber(data, ['temp', 'temperatura', 'temperature']),
+    umid_ar: readNumber(data, ['umid_ar', 'umidade_ar', 'humidity_air']),
+    temp_solo: readNumber(data, ['temp_solo', 'temperatura_solo', 'soil_temp']),
+    umid_solo: readNumber(data, ['umid_solo', 'umidade_solo', 'soil_moisture']),
+    luz: readNumber(data, ['luz', 'luminosidade', 'light']),
+  };
+}
+
+function normalizeActuatorPayload(payload: unknown): ActuatorStatusPayload | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const data = payload as Record<string, unknown>;
+  const equip = data.equip ?? data.name ?? data.atuador;
+  const rawState = data.estado ?? data.state;
+  const trigger = data.gatilho === 'automatico' || data.gatilho === 'manual' ? data.gatilho : 'manual';
+
+  if (typeof equip !== 'string') return null;
+
+  return {
+    equip,
+    estado: typeof rawState === 'boolean' ? rawState : rawState === 'true' || rawState === 1,
+    gatilho: trigger,
+  };
+}
+
+function normalizeHeartbeatPayload(payload: unknown): HeartbeatPayload | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const data = payload as Record<string, unknown>;
+  const status = data.status === 'OFFLINE' ? 'OFFLINE' : 'ONLINE';
+
+  return {
+    status,
+    uptime: readNumber(data, ['uptime']) ?? 0,
+    wifi_rssi: readNumber(data, ['wifi_rssi', 'rssi']) ?? 0,
+    mem_livre: readNumber(data, ['mem_livre', 'free_memory']) ?? 0,
+  };
+}
 
 export function setupMqttHandlers(
   mqttClient: MqttClient,
   io: SocketServer<ClientToServerEvents, ServerToClientEvents>
 ) {
 
-  mqttClient.subscribe('agrotech/#', { qos: 1 }, (err, granted) => {
+  mqttClient.subscribe(MQTT_TOPICS, { qos: 1 }, (err, granted) => {
     if (err) logger.error('Subscribe erro', { err });
     else     logger.info('Subscribe aceito', { granted });
   });
@@ -66,26 +129,53 @@ export function setupMqttHandlers(
       return;
     }
 
+    let handled = false;
     try {
       switch (`${category}/${subcategory}`) {
-        case 'sensores/estado':
-          await handleSensorData(greenhouseId, payload as SensorPayload, io);
+        case 'sensores/estado': {
+          const data = normalizeSensorPayload(payload);
+          if (!data) {
+            logger.warn('Invalid sensor payload shape', { topic, payload });
+            return;
+          }
+          await handleSensorData(greenhouseId, data, io);
+          handled = true;
           break;
+        }
 
-        case 'status/atuadores':
-          await handleActuatorStatus(greenhouseId, payload as ActuatorStatusPayload, io);
+        case 'status/atuadores': {
+          const data = normalizeActuatorPayload(payload);
+          if (!data) {
+            logger.warn('Invalid actuator payload shape', { topic, payload });
+            return;
+          }
+          await handleActuatorStatus(greenhouseId, data, io);
+          handled = true;
           break;
+        }
 
         case 'status/sistema':
-          await handleHeartbeat(greenhouseId, payload as HeartbeatPayload, io);
+        case 'status/conexao': {
+          const data = normalizeHeartbeatPayload(payload);
+          if (!data) {
+            logger.warn('Invalid heartbeat payload shape', { topic, payload });
+            return;
+          }
+          await handleHeartbeat(greenhouseId, data, io);
+          handled = true;
           break;
+        }
 
         default:
           logger.debug('Unhandled MQTT topic', { topic });
       }
     } catch (err) {
+      observeMqttMessage(payload, false);
       logger.error('MQTT handler error', { topic, err });
+      return;
     }
+
+    observeMqttMessage(payload, handled);
   });
 }
 
@@ -111,7 +201,7 @@ async function handleSensorData(
         'CRITICAL',
         { raw: data }
       );
-      io.to(greenhouseId).emit('alert:critical', {
+      emitCriticalAlert(io, {
         id: alert.id,
         greenhouseId,
         type: 'SENSOR_FAILURE',
@@ -124,23 +214,7 @@ async function handleSensorData(
   // Persist to InfluxDB (RN08)
   await sensorsSvc.writeTelemetry(greenhouseId, data);
 
-  const timestamp = new Date().toISOString();
-  const telemetry = {
-    ...data,
-    greenhouseId,
-    timestamp,
-  };
-
-  // Broadcast to dashboard via Socket.IO
-  io.to(greenhouseId).emit('sensor:update', telemetry);
-  io.to(greenhouseId).emit('telemetry:update', telemetry);
-  io.to(greenhouseId).emit('greenhouse:update', {
-    greenhouseId,
-    latestTelemetry: {
-      ...data,
-      timestamp,
-    },
-  });
+  emitSensorTelemetry(io, greenhouseId, data);
 
   // RN10: Check critical thresholds
   await checkThresholds(greenhouseId, data, io);
@@ -158,7 +232,7 @@ async function handleActuatorStatus(
     data.gatilho === 'automatico' ? 'AUTOMATIC' : 'MANUAL'
   );
 
-  io.to(greenhouseId).emit('actuator:update', { ...data, greenhouseId });
+  emitActuatorStatus(io, greenhouseId, data);
 }
 
 async function handleHeartbeat(
@@ -169,7 +243,7 @@ async function handleHeartbeat(
   // Store heartbeat timestamp in Redis with TTL (RN11)
   await redis.setex(HEARTBEAT_KEY(greenhouseId), HEARTBEAT_TTL, Date.now().toString());
 
-  io.to(greenhouseId).emit('heartbeat:update', { ...data, greenhouseId });
+  emitHeartbeat(io, greenhouseId, data);
 
   // If device was previously detected offline, auto-resolve that alert
   if (data.status === 'ONLINE') {
@@ -224,7 +298,7 @@ async function checkThresholds(
               value: check.type === 'TEMP_CRITICAL' ? data.temp : data.umid_solo,
               elapsed_min: Math.floor(elapsed / 60000),
             });
-            io.to(greenhouseId).emit('alert:critical', {
+            emitCriticalAlert(io, {
               id: alert.id,
               greenhouseId,
               type: check.type,
@@ -263,8 +337,8 @@ export async function checkHeartbeats(
           'ESP32 has not sent a heartbeat in over 15 minutes.',
           'CRITICAL'
         );
-        io.to(id).emit('greenhouse:offline', { greenhouseId: id, since: new Date().toISOString() });
-        io.to(id).emit('alert:critical', {
+        emitGreenhouseOffline(io, id);
+        emitCriticalAlert(io, {
           id: alert.id,
           greenhouseId: id,
           type: 'DEVICE_OFFLINE',

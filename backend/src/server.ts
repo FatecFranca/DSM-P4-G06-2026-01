@@ -8,6 +8,7 @@ import { createApp } from './app';
 import { connectMqtt } from './mqtt/mqtt.client';
 import { setupMqttHandlers, checkHeartbeats } from './mqtt/mqtt.handler';
 import { createSocketServer } from './realtime/socket.server';
+import { getRuntimeMetricsSnapshot } from './realtime/runtime-metrics.service';
 
 
 console.log('MQTT_CLIENT_ID:', env.MQTT_CLIENT_ID);
@@ -33,6 +34,13 @@ async function bootstrap() {
 
   // ─── Heartbeat watchdog (RN11) — check every 5 min ────────────────────────
   const heartbeatInterval = setInterval(() => checkHeartbeats(io), 5 * 60 * 1000);
+  const runtimeMetricsInterval = setInterval(async () => {
+    try {
+      io.emit('runtime:metrics', await getRuntimeMetricsSnapshot());
+    } catch (err) {
+      logger.warn('Runtime metrics snapshot failed', { err });
+    }
+  }, 1000);
 
   // ─── Listen ────────────────────────────────────────────────────────────────
   httpServer.listen(Number(env.PORT), () => {
@@ -43,6 +51,7 @@ async function bootstrap() {
   async function shutdown(signal: string) {
     logger.info(`Received ${signal}, shutting down...`);
     clearInterval(heartbeatInterval);
+    clearInterval(runtimeMetricsInterval);
     mqttClient.end();
     httpServer.close(async () => {
       await closeConnections();
